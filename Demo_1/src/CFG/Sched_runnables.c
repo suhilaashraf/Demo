@@ -5,26 +5,29 @@ void LCD_task();
 void Demo_Runnable(void);
 void SWITCH_Runabble(void);
 
-const Runnable_t Runnables_info [RUNNABLES_NUM]=
+Runnable_t Runnables_info [RUNNABLES_NUM]=
 {
     [0]=
     {
         .name = "LCD_TASK",
         .periodicity_ms = 2,
         .cbf = LCD_task,
-    },
-    [1]=
-    {
-        .name = "Demo1",
-        .periodicity_ms = 25,
-        .cbf = Demo_Runnable,
+        .FirstDelay=0,
     },
     [2]=
     {
+        .name = "Demo1",
+        .periodicity_ms = 50,
+        .cbf = Demo_Runnable,
+        .FirstDelay=1,
+    },
+    [1]=
+    {
         .name = "Switch",
         .periodicity_ms = 5,
-        .cbf = SWITCH_Runabble ,
-    },
+        .cbf = SWITCH_Runabble,
+        .FirstDelay=0,
+    }
 
 
 /*

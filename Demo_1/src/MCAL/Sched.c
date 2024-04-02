@@ -4,7 +4,7 @@
  */
 #include "Sched.h"
 
-extern const Runnable_t Runnables_info [RUNNABLES_NUM];
+extern Runnable_t Runnables_info [RUNNABLES_NUM];
 uint32_t Pendingticks;
 
 
@@ -33,13 +33,18 @@ void Sched_Start(void)
 static void Sched(void)
 {
     uint32_t Localindex;
-    static uint32_t timestamp = 1;
+    static uint32_t timestamp = 0;
     for (Localindex = 0; Localindex < RUNNABLES_NUM; Localindex++)
     {
-        if ((Runnables_info[Localindex].cbf) && (timestamp % Runnables_info[Localindex].periodicity_ms == 0))
+        if ((Runnables_info[Localindex].cbf) && (timestamp % Runnables_info[Localindex].periodicity_ms == 0) && (Runnables_info[Localindex].FirstDelay==0))
         {
             Runnables_info[Localindex].cbf();
         }
+        if (Runnables_info[Localindex].FirstDelay!=0)
+        {
+            Runnables_info[Localindex].FirstDelay -= SCH_TICKS_MS;;
+        }
+        
     }
     timestamp += SCH_TICKS_MS;
 

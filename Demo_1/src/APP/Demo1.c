@@ -47,7 +47,7 @@ struct
 } cursor;
 
 /******************/
-uint32_t CurrentPressedSwitch=_SWITCH_NUM;
+uint32_t CurrentPressedSwitch = _SWITCH_NUM;
 WatchViews CurrentWatchView = DefaultView;
 char DateString[] = "01-04-2024";
 char *DateBuffer = DateString;
@@ -55,6 +55,8 @@ char TimeString[] = "04:13:00";
 char *TimeBuffer = TimeString;
 uint8_t displayState;
 uint8_t LCD_command = CURSOR1;
+uint32_t default_counter;
+uint32_t mode_counter;
 // /******************/
 
 // /*****************/
@@ -74,19 +76,27 @@ void Demo_Runnable(void)
     switch (CurrentWatchView)
     {
     case DefaultView:
-        Display_DefaultView();
-        if (CurrentPressedSwitch == Switch_mode)
+        if (CurrentPressedSwitch == _SWITCH_NUM)
         {
-            LCD_command = CLEAR;
+            Display_DefaultView();
+        }
+        else if (CurrentPressedSwitch == Switch_mode)
+        {
+            LCD_clearScreenAsyn();
             CurrentWatchView = ModeView;
+            mode_counter=0;
         }
         break;
     case ModeView:
-        Display_ModeView();
-        if (CurrentPressedSwitch == Switch_mode)
+        if (CurrentPressedSwitch == _SWITCH_NUM)
         {
-            LCD_command = CLEAR;
+            Display_ModeView();
+        }
+        else if (CurrentPressedSwitch == Switch_mode)
+        {
+            LCD_clearScreenAsyn();
             CurrentWatchView = DefaultView;
+            default_counter=0;
         }
         break;
     case StopWatchView:
@@ -111,56 +121,24 @@ void WatchInit(void)
 }
 void Display_DefaultView()
 {
-    switch (LCD_command)
+   
+    default_counter++;
+    if (default_counter == 1)
     {
-    case CLEAR:
-        if (flag[clear_done] == 0)
-        {
-            LCD_clearScreenAsyn();
-        }
-        else
-        {
-            LCD_command = CURSOR1;
-            flag[clear_done] = 0;
-        }
-    case CURSOR1:
-        if (flag[setcursor_done] == 0)
-        {
-            LCD_setCursorPosAsyn(0,0);
-        }
-        else
-        {
-            LCD_command = WRITE_DATE;
-            flag[setcursor_done] = 0;
-        }
-    case WRITE_DATE:
-        if (flag[write_done] == 0)
-            DisplayDate();
-        else
-        {
-            LCD_command = CURSOR2;
-            flag[write_done] = 0;
-        }
-    case CURSOR2:
-        if (flag[setcursor_done] == 0)
-            LCD_setCursorPosAsyn(1, 0);
-        else
-        {
-            LCD_command = WRITE_TIME;
-            flag[setcursor_done] = 0;
-        }
-    case WRITE_TIME:
-        if (flag[write_done] == 0)
-            DisplayTime();
-        else
-        {
-            LCD_command = CURSOR1;
-            flag[write_done] = 0;
-        }
-        break;
-
-    default:
-        break;
+        LCD_setCursorPosAsyn(0, 0);
+    }
+    else if (default_counter == 2)
+    {
+        DisplayDate();
+    }
+    else if (default_counter == 3)
+    {
+        LCD_setCursorPosAsyn(1, 0);
+    }
+    else
+    {
+        default_counter = 0;
+        DisplayTime();
     }
 }
 
@@ -215,7 +193,7 @@ void CurrTime(void) // enter every 50 milliseconds
 }
 
 /* Function that calculate real date */
-    void CurrDate(void)
+void CurrDate(void)
 {
     Date.Day.digit0++;
     if (Date.Day.digit0 == 9)
@@ -231,13 +209,13 @@ void CurrTime(void) // enter every 50 milliseconds
         }
     }
     else if (Date.Month.digit0 == 2)
-        /* handle feb 29 days every 4 years*/
+    /* handle feb 29 days every 4 years*/
+    {
+        if (Date.Day.digit0 == 2 && Date.Day.digit1 == 8)
         {
-            if (Date.Day.digit0 == 2 && Date.Day.digit1 == 8)
-            {
-                Date.Month.digit0++;
-            }
+            Date.Month.digit0++;
         }
+    }
     else
     {
         if (Date.Day.digit0 == 0 && Date.Day.digit1 == 3)
@@ -308,67 +286,23 @@ void DisplayDate()
 
 void Display_ModeView(void)
 {
-
-    switch (LCD_command)
+    mode_counter++;
+    if (mode_counter == 1)
     {
-    case CLEAR:
-        if (flag[clear_done] == 0)
-        {
-            LCD_clearScreenAsyn();
-        }
-        else
-        {
-            LCD_command = CURSOR1;
-            flag[clear_done] = 0;
-        }
-        break;
-    case CURSOR1:
-        if (flag[setcursor_done] == 0)
-        {
-            LCD_setCursorPosAsyn(0, 0);
-        }
-        else
-        {
-            LCD_command = WRITE_STOPWATCHMODE;
-            flag[setcursor_done] = 0;
-        }
-        break;
-
-    case WRITE_STOPWATCHMODE:
-        if (flag[write_done] == 0)
-        {
-            LCD_writeStringAsyn("Stop Watch", 10);
-        }
-        else
-        {
-            LCD_command = CURSOR2;
-            flag[write_done] = 0;
-        }
-        break;
-    case CURSOR2:
-        if (flag[setcursor_done] == 0)
-        {
-            LCD_setCursorPosAsyn(1, 0);
-        }
-        else
-        {
-            LCD_command = WRITE_EDITMODE;
-            flag[setcursor_done] = 0;
-        }
-    case WRITE_EDITMODE:
-        if (flag[write_done] == 0)
-        {
-            LCD_writeStringAsyn("Edit Time & Date", 16);
-        }
-        else
-        {
-            LCD_command = CURSOR1;
-            flag[write_done] = 0;
-        }
-        break;
-
-    default:
-        break;
+        LCD_setCursorPosAsyn(0, 0);
+    }
+    else if (mode_counter == 2)
+    {
+        LCD_writeStringAsyn("Stop Watch", 10);
+    }
+    else if (mode_counter == 3)
+    {
+        LCD_setCursorPosAsyn(1, 0);
+    }
+    else
+    {
+        mode_counter = 0;
+        LCD_writeStringAsyn("Edit Time & Date", 16);
     }
 }
 void SwitchControl(void)
