@@ -2,9 +2,12 @@
 #include "LCDinterface.h"
 #include "Demo.h"
 
-#define Ascii0 48
-#define AsciiColon 58
-#define AsciiDash 45
+#define Ascii0      48
+#define AsciiColon  58
+#define AsciiDash   45
+#define START       1
+#define PAUSE       2
+#define STOP        3
 
 typedef enum
 {
@@ -26,12 +29,12 @@ typedef struct digits
     uint8_t digit3;
 } Digits_t;
 
-struct
+typedef struct
 {
     Digits_t Seconds;
     Digits_t Minutes;
     Digits_t Hours;
-} Time;
+} Time_t;
 
 struct
 {
@@ -47,16 +50,22 @@ struct
 } cursor;
 
 /******************/
+Time_t Time;
+Time_t Stopwatch;
 uint32_t CurrentPressedSwitch = _SWITCH_NUM;
 WatchViews CurrentWatchView = DefaultView;
 char DateString[] = "01-04-2024";
 char *DateBuffer = DateString;
 char TimeString[] = "04:13:00";
 char *TimeBuffer = TimeString;
+char *StopWatchbuffer= TimeString;
 uint8_t displayState;
 uint8_t LCD_command = CURSOR1;
 uint32_t default_counter;
 uint32_t mode_counter;
+uint32_t counter;
+uint8_t stopwatchstate = STOP;
+uint8_t stopwatchcounter;
 // /******************/
 
 // /*****************/
@@ -68,11 +77,15 @@ void LCD_handle();
 void Display_DefaultView();
 void Display_ModeView(void);
 void SwitchControl(void);
-
+void StopWatch(void);
+void DisplayStopWatch(void);
+void Display_StopWatch(void);
 /******************/
 void Demo_Runnable(void)
 {
     CurrTime();
+    StopWatch();
+    SwitchControl();
     switch (CurrentWatchView)
     {
     case DefaultView:
@@ -87,6 +100,7 @@ void Demo_Runnable(void)
             mode_counter=0;
         }
         break;
+
     case ModeView:
         if (CurrentPressedSwitch == _SWITCH_NUM)
         {
@@ -98,8 +112,48 @@ void Demo_Runnable(void)
             CurrentWatchView = DefaultView;
             default_counter=0;
         }
+        else if (CurrentPressedSwitch == Switch_up)
+        {
+            LCD_clearScreenAsyn();
+            CurrentWatchView = StopWatchView; 
+            counter=0;
+        }
+        else if (CurrentPressedSwitch == Switch_down)
+        {
+            LCD_clearScreenAsyn();
+            CurrentWatchView = EditTimeView;  
+        }        
         break;
+
     case StopWatchView:
+        if (CurrentPressedSwitch == _SWITCH_NUM )
+        {
+            Display_StopWatch();
+        }
+        else if (CurrentPressedSwitch == Switch_mode)
+        {
+            LCD_clearScreenAsyn();
+            CurrentWatchView = ModeView;  
+            mode_counter=0;
+        }   
+        else if (CurrentPressedSwitch == Switch_up)
+        {
+            stopwatchstate = START;
+            LCD_clearScreenAsyn();
+        }             
+        else if (CurrentPressedSwitch == Switch_down)
+        {
+            stopwatchcounter++;
+            if (stopwatchcounter == 2)
+            {
+                stopwatchstate = PAUSE;
+            } 
+            if (stopwatchcounter == 4)
+            {
+                stopwatchstate = STOP;
+                stopwatchcounter=0;
+            }
+        }
 
         break;
 
@@ -111,7 +165,6 @@ void Demo_Runnable(void)
 
         break;
     }
-    SwitchControl();
 }
 
 void WatchInit(void)
@@ -121,7 +174,6 @@ void WatchInit(void)
 }
 void Display_DefaultView()
 {
-   
     default_counter++;
     if (default_counter == 1)
     {
@@ -139,6 +191,47 @@ void Display_DefaultView()
     {
         default_counter = 0;
         DisplayTime();
+    }
+}
+
+void Display_ModeView(void)
+{
+    mode_counter++;
+    if (mode_counter == 1)
+    {
+        LCD_setCursorPosAsyn(0, 0);
+    }
+    else if (mode_counter == 2)
+    {
+        LCD_writeStringAsyn("Stop Watch", 10);
+    }
+    else if (mode_counter == 3)
+    {
+        LCD_setCursorPosAsyn(1, 0);
+    }
+    else
+    {
+        mode_counter = 0;
+        LCD_writeStringAsyn("Edit Time & Date", 16);
+    }
+}
+
+void Display_StopWatch(void)
+{
+    counter++;
+    if (stopwatchstate ==0)
+    {
+        LCD_writeStringAsyn ("00:00:00",8);
+        counter=0;
+    }
+    if (counter == 1)
+    {
+        LCD_setCursorPosAsyn(0, 0);
+    }
+    else if (counter == 2)
+    {
+        DisplayStopWatch();
+        counter=0;
     }
 }
 
@@ -249,6 +342,67 @@ void CurrDate(void)
     }
 }
 
+void StopWatch(void)
+{
+    static uint32_t counter = 0;
+    if (stopwatchstate == START)
+    {
+        if (counter == 1000)
+        {
+            Stopwatch.Seconds.digit0++;
+            if (Stopwatch.Seconds.digit0 > 9)
+            {
+                if (Stopwatch.Seconds.digit1 == 5)
+                {
+                    Stopwatch.Seconds.digit0 = 0;
+                    Stopwatch.Seconds.digit1 = 0;
+                    Stopwatch.Minutes.digit0++;
+                }
+                else
+                {
+                    Stopwatch.Seconds.digit0 = 0;
+                    Stopwatch.Seconds.digit1++;
+                }
+            }
+            if (Stopwatch.Minutes.digit0 > 9)
+            {
+                if (Stopwatch.Seconds.digit1 == 5)
+                {
+                    Stopwatch.Minutes.digit0 = 0;
+                    Stopwatch.Minutes.digit1 = 0;
+                    Stopwatch.Hours.digit0++;
+                }
+                else
+                {
+                    Stopwatch.Minutes.digit0 = 0;
+                    Stopwatch.Minutes.digit1++;
+                }
+            }
+            if (Stopwatch.Hours.digit0 > 9)
+            {
+                Stopwatch.Hours.digit0 = 0;
+                Stopwatch.Hours.digit1++;
+                if (Stopwatch.Hours.digit0 == 3 && Stopwatch.Hours.digit1 == 2)
+                {
+                    Stopwatch.Hours.digit0 = 0;
+                    Stopwatch.Hours.digit1 = 0;
+                }
+            }
+            counter = 0;
+        }
+        counter += 50;
+    }
+    if(stopwatchstate == STOP)
+    {
+        Stopwatch.Seconds.digit0=0;
+        Stopwatch.Seconds.digit1=0;
+        Stopwatch.Minutes.digit0=0;
+        Stopwatch.Minutes.digit1=0;
+        Stopwatch.Hours.digit0=0;
+        Stopwatch.Hours.digit1=0;
+    }
+}
+
 void DisplayTime(void)
 {
     TimeBuffer[0] = 48 + Time.Hours.digit1;
@@ -284,27 +438,19 @@ void DisplayDate()
     LCD_writeStringAsyn(DateBuffer, 10);
 }
 
-void Display_ModeView(void)
+void DisplayStopWatch(void)
 {
-    mode_counter++;
-    if (mode_counter == 1)
-    {
-        LCD_setCursorPosAsyn(0, 0);
-    }
-    else if (mode_counter == 2)
-    {
-        LCD_writeStringAsyn("Stop Watch", 10);
-    }
-    else if (mode_counter == 3)
-    {
-        LCD_setCursorPosAsyn(1, 0);
-    }
-    else
-    {
-        mode_counter = 0;
-        LCD_writeStringAsyn("Edit Time & Date", 16);
-    }
+    StopWatchbuffer[0] = 48 + Stopwatch.Hours.digit1;
+    StopWatchbuffer[1] = 48 + Stopwatch.Hours.digit0;
+    StopWatchbuffer[2] = 58;
+    StopWatchbuffer[3] = 48 + Stopwatch.Minutes.digit1;
+    StopWatchbuffer[4] = 48 + Stopwatch.Minutes.digit0;
+    StopWatchbuffer[5] = 58;
+    StopWatchbuffer[6] = 48 + Stopwatch.Seconds.digit1;
+    StopWatchbuffer[7] = 48 + Stopwatch.Seconds.digit0;
+    LCD_writeStringAsyn(StopWatchbuffer, 8);
 }
+
 void SwitchControl(void)
 {
     uint16_t modestatus;
