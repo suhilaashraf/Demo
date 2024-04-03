@@ -2,12 +2,12 @@
 #include "LCDinterface.h"
 #include "Demo.h"
 
-#define Ascii0      48
-#define AsciiColon  58
-#define AsciiDash   45
-#define START       1
-#define PAUSE       2
-#define STOP        3
+#define Ascii0 48
+#define AsciiColon 58
+#define AsciiDash 45
+#define START 1
+#define PAUSE 2
+#define STOP 3
 
 typedef enum
 {
@@ -58,14 +58,17 @@ char DateString[] = "01-04-2024";
 char *DateBuffer = DateString;
 char TimeString[] = "04:13:00";
 char *TimeBuffer = TimeString;
-char *StopWatchbuffer= TimeString;
+char *StopWatchbuffer = TimeString;
 uint8_t displayState;
 uint8_t LCD_command = CURSOR1;
 uint32_t default_counter;
 uint32_t mode_counter;
-uint32_t counter;
+uint8_t EditTime_counter;
+uint32_t stopwatch_counter; 
+uint32_t stopwatchcounter;
+
 uint8_t stopwatchstate = STOP;
-uint8_t stopwatchcounter;
+
 // /******************/
 
 // /*****************/
@@ -81,91 +84,105 @@ void StopWatch(void);
 void DisplayStopWatch(void);
 void Display_StopWatch(void);
 /******************/
-void Demo_Runnable(void)
+    void Demo_Runnable(void)
 {
     CurrTime();
     StopWatch();
     SwitchControl();
-    switch (CurrentWatchView)
+    if (CurrentPressedSwitch != _SWITCH_NUM)
     {
-    case DefaultView:
-        if (CurrentPressedSwitch == _SWITCH_NUM)
+        LCD_clearScreenAsyn();
+        switch (CurrentPressedSwitch)
         {
-            Display_DefaultView();
-        }
-        else if (CurrentPressedSwitch == Switch_mode)
-        {
-            LCD_clearScreenAsyn();
-            CurrentWatchView = ModeView;
-            mode_counter=0;
-        }
-        break;
-
-    case ModeView:
-        if (CurrentPressedSwitch == _SWITCH_NUM)
-        {
-            Display_ModeView();
-        }
-        else if (CurrentPressedSwitch == Switch_mode)
-        {
-            LCD_clearScreenAsyn();
-            CurrentWatchView = DefaultView;
-            default_counter=0;
-        }
-        else if (CurrentPressedSwitch == Switch_up)
-        {
-            LCD_clearScreenAsyn();
-            CurrentWatchView = StopWatchView; 
-            counter=0;
-        }
-        else if (CurrentPressedSwitch == Switch_down)
-        {
-            LCD_clearScreenAsyn();
-            CurrentWatchView = EditTimeView;  
-        }        
-        break;
-
-    case StopWatchView:
-        if (CurrentPressedSwitch == _SWITCH_NUM )
-        {
-            Display_StopWatch();
-        }
-        else if (CurrentPressedSwitch == Switch_mode)
-        {
-            LCD_clearScreenAsyn();
-            CurrentWatchView = ModeView;  
-            mode_counter=0;
-        }   
-        else if (CurrentPressedSwitch == Switch_up)
-        {
-            stopwatchstate = START;
-            LCD_clearScreenAsyn();
-        }             
-        else if (CurrentPressedSwitch == Switch_down)
-        {
-            stopwatchcounter++;
-            if (stopwatchcounter == 2)
+        case Switch_mode:
+            switch (CurrentWatchView)
             {
-                stopwatchstate = PAUSE;
-            } 
-            if (stopwatchcounter == 4)
-            {
-                stopwatchstate = STOP;
-                stopwatchcounter=0;
+            case DefaultView:
+                mode_counter = 0;
+                CurrentWatchView = ModeView;
+                break;
+            case ModeView:
+                default_counter = 0;
+                CurrentWatchView = DefaultView;
+                break;
+            case StopWatchView:
+                mode_counter = 0;
+                CurrentWatchView = ModeView;
+                break;
+            case EditTimeView:
+                mode_counter = 0;
+                CurrentWatchView = ModeView;
+                break;
             }
+            break;
+        case Switch_up:
+            switch (CurrentWatchView)
+            {
+            case ModeView:
+                stopwatch_counter = 0;
+                CurrentWatchView = StopWatchView;
+                break;
+            case StopWatchView:
+                stopwatchstate = START;
+                break;
+            default:
+                break;
+            }
+            break;
+        case Switch_down:
+            switch (CurrentWatchView)
+            {
+            case ModeView:
+                EditTime_counter = 0;
+                CurrentWatchView = EditTimeView;
+                break;
+            case StopWatchView:
+                stopwatchcounter++;
+                if (stopwatchcounter == 1)
+                {
+                    stopwatchstate = PAUSE;
+                }
+                if (stopwatchcounter == 2)
+                {
+                    stopwatchstate = STOP;
+                    stopwatchcounter = 0;
+                }
+                break;
+            default:
+                break;
+            }
+            break;
+        default:
+            break;
         }
+    }
 
-        break;
+    if (CurrentPressedSwitch == _SWITCH_NUM)
+    {
+        switch (CurrentWatchView)
+        {
+        case DefaultView:
+            Display_DefaultView();
+            break;
+        case ModeView:
+            Display_ModeView();
+            break;
 
-    case EditTimeView:
+        case StopWatchView:
+            Display_StopWatch();
+            break;
 
-        break;
+            // case EditTimeView:
 
-    default:
+            //     break;
 
-        break;
+        default:
+
+            break;
+        }
     }
 }
+
 
 void WatchInit(void)
 {
@@ -218,27 +235,27 @@ void Display_ModeView(void)
 
 void Display_StopWatch(void)
 {
-    counter++;
-    if (stopwatchstate ==0)
+    stopwatch_counter++;
+    if (stopwatchstate == 0)
     {
-        LCD_writeStringAsyn ("00:00:00",8);
-        counter=0;
+        LCD_writeStringAsyn("00:00:00", 8);
+        stopwatch_counter = 0;
     }
-    if (counter == 1)
+    if (stopwatch_counter == 1)
     {
         LCD_setCursorPosAsyn(0, 0);
     }
-    else if (counter == 2)
+    else if (stopwatch_counter == 2)
     {
         DisplayStopWatch();
-        counter=0;
+        stopwatch_counter = 0;
     }
 }
 
 void CurrTime(void) // enter every 50 milliseconds
 {
-    static uint32_t counter = 0;
-    if (counter == 1000)
+    static uint32_t sec_counter = 0;
+    if (sec_counter == 1000)
     {
         Time.Seconds.digit0++;
         if (Time.Seconds.digit0 > 9)
@@ -280,9 +297,9 @@ void CurrTime(void) // enter every 50 milliseconds
                 CurrDate();
             }
         }
-        counter = 0;
+        sec_counter = 0;
     }
-    counter += 50;
+    sec_counter += 100;
 }
 
 /* Function that calculate real date */
@@ -344,10 +361,10 @@ void CurrDate(void)
 
 void StopWatch(void)
 {
-    static uint32_t counter = 0;
+    static uint32_t st_sw_counter = 0;
     if (stopwatchstate == START)
     {
-        if (counter == 1000)
+        if (st_sw_counter == 1000)
         {
             Stopwatch.Seconds.digit0++;
             if (Stopwatch.Seconds.digit0 > 9)
@@ -388,18 +405,18 @@ void StopWatch(void)
                     Stopwatch.Hours.digit1 = 0;
                 }
             }
-            counter = 0;
+            st_sw_counter = 0;
         }
-        counter += 50;
+        st_sw_counter += 100;
     }
-    if(stopwatchstate == STOP)
+    if (stopwatchstate == STOP)
     {
-        Stopwatch.Seconds.digit0=0;
-        Stopwatch.Seconds.digit1=0;
-        Stopwatch.Minutes.digit0=0;
-        Stopwatch.Minutes.digit1=0;
-        Stopwatch.Hours.digit0=0;
-        Stopwatch.Hours.digit1=0;
+        Stopwatch.Seconds.digit0 = 0;
+        Stopwatch.Seconds.digit1 = 0;
+        Stopwatch.Minutes.digit0 = 0;
+        Stopwatch.Minutes.digit1 = 0;
+        Stopwatch.Hours.digit0 = 0;
+        Stopwatch.Hours.digit1 = 0;
     }
 }
 
