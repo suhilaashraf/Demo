@@ -2,14 +2,21 @@
 #include "LCDinterface.h"
 #include "Demo.h"
 
-#define Ascii0 48
-#define AsciiColon 58
-#define AsciiDash 45
-#define START 1
-#define PAUSE 2
-#define STOP 3
 
-typedef enum
+/***************************************************/
+#define Ascii0          48
+#define AsciiColon      58
+#define AsciiDash       45
+#define START           1
+#define PAUSE           2
+#define STOP            3
+#define Periodicity     100
+#define newline         15
+#define inc             1
+#define dec             2
+/***************************************************/
+
+enum
 {
     WRITE_TIME,
     WRITE_DATE,
@@ -20,7 +27,8 @@ typedef enum
     CLEAR
 } lcd_commands;
 
-/******************/
+/***************************************************/
+
 typedef struct digits
 {
     uint8_t digit0;
@@ -36,6 +44,8 @@ typedef struct
     Digits_t Hours;
 } Time_t;
 
+/***************************************************/
+
 struct
 {
     Digits_t Day;
@@ -47,31 +57,31 @@ struct
 {
     uint8_t xPos;
     uint8_t yPos;
-} cursor;
+}cursor;
 
-/******************/
+/*************************Variables****************************/
+
 Time_t Time;
 Time_t Stopwatch;
 uint32_t CurrentPressedSwitch = _SWITCH_NUM;
 WatchViews CurrentWatchView = DefaultView;
+uint8_t LCD_command = CURSOR1;
+uint8_t default_counter;
+uint8_t mode_counter;
+uint8_t EditTime_counter;
+uint8_t stopwatch_counter; 
+uint8_t stopwatchcounter;
+uint8_t stopwatchstate = STOP;
+uint8_t editstate;
+uint8_t arrowcounter;
 char DateString[] = "01-04-2024";
 char *DateBuffer = DateString;
 char TimeString[] = "04:13:00";
 char *TimeBuffer = TimeString;
 char *StopWatchbuffer = TimeString;
-uint8_t displayState;
-uint8_t LCD_command = CURSOR1;
-uint32_t default_counter;
-uint32_t mode_counter;
-uint8_t EditTime_counter;
-uint32_t stopwatch_counter; 
-uint32_t stopwatchcounter;
 
-uint8_t stopwatchstate = STOP;
 
-// /******************/
-
-// /*****************/
+/*************************Functions ProtoTypes****************************/
 void CurrDate(void);
 void CurrTime(void);
 void DisplayTime(void);
@@ -83,11 +93,17 @@ void SwitchControl(void);
 void StopWatch(void);
 void DisplayStopWatch(void);
 void Display_StopWatch(void);
-/******************/
-    void Demo_Runnable(void)
+void Display_EditTime(void);
+void EditTime(void);
+
+/*****************************Implementation*******************************/
+
+
+void Demo_Runnable(void)
 {
     CurrTime();
     StopWatch();
+    EditTime();
     SwitchControl();
     if (CurrentPressedSwitch != _SWITCH_NUM)
     {
@@ -125,6 +141,9 @@ void Display_StopWatch(void);
             case StopWatchView:
                 stopwatchstate = START;
                 break;
+            case EditTimeView:
+                editstate = inc;
+                break;    
             default:
                 break;
             }
@@ -148,10 +167,55 @@ void Display_StopWatch(void);
                     stopwatchcounter = 0;
                 }
                 break;
+            case EditTimeView:
+                editstate = dec;
+                break;    
             default:
                 break;
             }
             break;
+
+        case Switch_right:
+            switch (CurrentWatchView)
+            {
+            case EditTimeView: 
+                arrowcounter++;
+                if (arrowcounter == 8)
+                {
+                    arrowcounter =0;
+                }
+                else if (arrowcounter == 2 || arrowcounter == 5)
+                {
+                    arrowcounter++;
+                }
+                break;
+            
+            default:
+                break;
+            }
+            break;
+
+
+        case Switch_left:
+            switch (CurrentWatchView)
+            {
+            case EditTimeView:
+                if (arrowcounter==0)
+                {
+                    arrowcounter=8;
+                }
+                else if (arrowcounter == 3 || arrowcounter == 6)
+                {
+                    arrowcounter--;
+                } 
+                arrowcounter--;
+                break;
+            
+            default:
+                break;
+            }
+            break;
+
         default:
             break;
         }
@@ -172,9 +236,9 @@ void Display_StopWatch(void);
             Display_StopWatch();
             break;
 
-            // case EditTimeView:
-
-            //     break;
+        case EditTimeView:
+            Display_EditTime();
+            break;
 
         default:
 
@@ -252,6 +316,20 @@ void Display_StopWatch(void)
     }
 }
 
+void Display_EditTime(void)
+{
+    EditTime_counter++;
+    if (EditTime_counter == 1)
+    {
+        LCD_setCursorPosAsyn(0, 0);
+    }
+    if (EditTime_counter == 2)
+    {
+        DisplayTime();
+        EditTime_counter=0;
+    }
+}
+
 void CurrTime(void) // enter every 50 milliseconds
 {
     static uint32_t sec_counter = 0;
@@ -299,7 +377,7 @@ void CurrTime(void) // enter every 50 milliseconds
         }
         sec_counter = 0;
     }
-    sec_counter += 100;
+    sec_counter += Periodicity;
 }
 
 /* Function that calculate real date */
@@ -407,7 +485,7 @@ void StopWatch(void)
             }
             st_sw_counter = 0;
         }
-        st_sw_counter += 100;
+        st_sw_counter += Periodicity;
     }
     if (stopwatchstate == STOP)
     {
@@ -420,6 +498,152 @@ void StopWatch(void)
     }
 }
 
+void EditTime(void)
+{
+    if (editstate == inc)
+    {
+        switch (arrowcounter)
+        {
+        case 0:
+            if (Time.Hours.digit1 == 2)
+            {
+                Time.Hours.digit1 = 0;
+            }
+            else
+            {
+                Time.Hours.digit1++;
+            }
+            break;
+        case 1:
+            if (Time.Hours.digit0 == 9)
+            {
+                Time.Hours.digit0 = 0;
+            }
+            else
+            {
+                Time.Hours.digit0++;
+            }
+            break;   
+        case 3:
+            if (Time.Minutes.digit1 == 5)
+            {
+                Time.Minutes.digit1 = 0;
+            }
+            else
+            {
+                Time.Minutes.digit1++;
+            }
+            break;
+        case 4:
+            if (Time.Minutes.digit0 == 9)
+            {
+                Time.Minutes.digit0 = 0;
+            }
+            else
+            {
+                Time.Minutes.digit0++;
+            }
+            break;
+        case 6:
+            if (Time.Seconds.digit1 == 5)
+            {
+                Time.Seconds.digit1 = 0;
+            }
+            else
+            {
+                Time.Seconds.digit1++;
+            }
+            break;
+        case 7:
+            if (Time.Seconds.digit0 == 9)
+            {
+                Time.Seconds.digit0 = 0;
+            }
+            else
+            {
+                Time.Seconds.digit0++;
+            }
+            break;
+        default:
+            break;
+        }
+        editstate = 0;
+    }
+    else if (editstate == dec)
+    {
+        switch (arrowcounter)
+        {
+        case 0:
+            if (Time.Hours.digit1 == 0)
+            {
+                Time.Hours.digit1 = 2;
+            }
+            else
+            {
+                Time.Hours.digit1--;
+            }
+            break;
+
+        case 1:
+            if (Time.Hours.digit0 == 0)
+            {
+                Time.Hours.digit0 = 9;
+            }
+            else
+            {
+                Time.Hours.digit0--;
+            }
+            break;
+        case 3:
+            if (Time.Minutes.digit1 == 0)
+            {
+                Time.Minutes.digit1 = 5;
+            }
+            else
+            {
+                Time.Minutes.digit1--;
+            }
+            break;
+        case 4:
+            if (Time.Minutes.digit0 == 0)
+            {
+                Time.Minutes.digit0 = 9;
+            }
+            else
+            {
+                Time.Minutes.digit0--;
+            }
+            break;
+        case 6:
+            if (Time.Seconds.digit1)
+            {
+                Time.Seconds.digit1 = 5;
+            }
+            else
+            {
+                Time.Seconds.digit1--;
+            }
+            break;
+        case 7:
+            if (Time.Seconds.digit0 == 0)
+            {
+                Time.Seconds.digit0 = 9;
+            }
+            else
+            {
+                Time.Seconds.digit0--;
+            }
+            break;
+        default:
+            break;
+        }
+        editstate = 0;
+    }
+}
+void ControlCursor(void)
+{
+
+}
 void DisplayTime(void)
 {
     TimeBuffer[0] = 48 + Time.Hours.digit1;

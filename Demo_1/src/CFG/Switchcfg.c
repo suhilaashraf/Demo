@@ -6,13 +6,13 @@ SWITCHCFG_str Switches [_SWITCH_NUM ]=
 		[Switch_up]=
 		{
 				.SwitchPORT = SWITCH_PORTB,
-				.SwitchPINnumber = SWITCH_PIN5,
+				.SwitchPINnumber = SWITCH_PIN1,
 				.SwitchConnection = SWITCH_PULLUP,
 		},
 		[Switch_down]=
 		{
 				.SwitchPORT = SWITCH_PORTB,
-				.SwitchPINnumber = SWITCH_PIN1,
+				.SwitchPINnumber = SWITCH_PIN2,
 				.SwitchConnection = SWITCH_PULLUP,
 		},    
 		[Switch_right]=

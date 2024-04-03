@@ -179,7 +179,7 @@ static void initSM()
 			init_State=DISPLAY_ON_OFF;
 		break;
 	case DISPLAY_ON_OFF:
-		statLCD_Write_Command(DISPLAY_ON_ON);
+		statLCD_Write_Command(DISPLAY_ON_OFF);
 		if (EN_status==0)
 			init_State=DISPLAY_CLEAR;;
 		break;
