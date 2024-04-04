@@ -18,13 +18,13 @@ SWITCHCFG_str Switches [_SWITCH_NUM ]=
 		[Switch_right]=
 		{
 				.SwitchPORT = SWITCH_PORTB,
-				.SwitchPINnumber = SWITCH_PIN4,
+				.SwitchPINnumber = SWITCH_PIN3,
 				.SwitchConnection = SWITCH_PULLUP,
 		},
 		[Switch_left]=
 		{
 				.SwitchPORT = SWITCH_PORTB,
-				.SwitchPINnumber = SWITCH_PIN3,
+				.SwitchPINnumber = SWITCH_PIN4,
 				.SwitchConnection = SWITCH_PULLUP,
 		},
 		[Switch_mode]=

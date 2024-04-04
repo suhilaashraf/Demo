@@ -17,7 +17,7 @@ Runnable_t Runnables_info [RUNNABLES_NUM]=
     [2]=
     {
         .name = "Demo1",
-        .periodicity_ms = 100,
+        .periodicity_ms = 50,
         .cbf = Demo_Runnable,
         .FirstDelay=10,
     },

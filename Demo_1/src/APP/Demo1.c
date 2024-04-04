@@ -1,4 +1,5 @@
 #include "Switch.h"
+#include"Uart.h"
 #include "LCDinterface.h"
 #include "Demo.h"
 
@@ -10,7 +11,7 @@
 #define START           1
 #define PAUSE           2
 #define STOP            3
-#define Periodicity     100
+#define Periodicity     50
 #define newline         15
 #define inc             1
 #define dec             2
@@ -39,6 +40,7 @@ typedef struct digits
 
 typedef struct
 {
+    Digits_t mSeconds;
     Digits_t Seconds;
     Digits_t Minutes;
     Digits_t Hours;
@@ -75,18 +77,18 @@ uint8_t stopwatchstate = STOP;
 uint8_t editstate;
 uint8_t arrowcounter;
 char DateString[] = "01-04-2024";
-char *DateBuffer = DateString;
-char TimeString[] = "04:13:00";
-char *TimeBuffer = TimeString;
+//char *DateBuffer = DateString;
+char TimeString[10];
+//char *TimeBuffer = TimeString;
 char *StopWatchbuffer = TimeString;
 
+extern uint8_t ReceiveBuffer[1];
 
 /*************************Functions ProtoTypes****************************/
 void CurrDate(void);
 void CurrTime(void);
 void DisplayTime(void);
 void DisplayDate(void);
-void LCD_handle();
 void Display_DefaultView();
 void Display_ModeView(void);
 void SwitchControl(void);
@@ -101,16 +103,18 @@ void EditTime(void);
 
 void Demo_Runnable(void)
 {
+    CurrentPressedSwitch = ReceiveBuffer[0];
     CurrTime();
     StopWatch();
     EditTime();
-    SwitchControl();
-    if (CurrentPressedSwitch != _SWITCH_NUM)
+    Uart_RxBufferAsync(ReceiveBuffer, 1, UART_1);
+    if (CurrentPressedSwitch != 0)
     {
+        ReceiveBuffer[0]=0;
         LCD_clearScreenAsyn();
         switch (CurrentPressedSwitch)
         {
-        case Switch_mode:
+        case 'M':
             switch (CurrentWatchView)
             {
             case DefaultView:
@@ -131,7 +135,7 @@ void Demo_Runnable(void)
                 break;
             }
             break;
-        case Switch_up:
+        case 'U':
             switch (CurrentWatchView)
             {
             case ModeView:
@@ -148,7 +152,7 @@ void Demo_Runnable(void)
                 break;
             }
             break;
-        case Switch_down:
+        case 'D':
             switch (CurrentWatchView)
             {
             case ModeView:
@@ -175,7 +179,7 @@ void Demo_Runnable(void)
             }
             break;
 
-        case Switch_right:
+        case 'R':
             switch (CurrentWatchView)
             {
             case EditTimeView: 
@@ -196,7 +200,7 @@ void Demo_Runnable(void)
             break;
 
 
-        case Switch_left:
+        case 'L':
             switch (CurrentWatchView)
             {
             case EditTimeView:
@@ -221,7 +225,7 @@ void Demo_Runnable(void)
         }
     }
 
-    if (CurrentPressedSwitch == _SWITCH_NUM)
+    if (CurrentPressedSwitch == 0)
     {
         switch (CurrentWatchView)
         {
@@ -333,6 +337,10 @@ void Display_EditTime(void)
 void CurrTime(void) // enter every 50 milliseconds
 {
     static uint32_t sec_counter = 0;
+    // if (sec_counter == 2 )
+    // {
+
+    // }
     if (sec_counter == 1000)
     {
         Time.Seconds.digit0++;
@@ -640,21 +648,18 @@ void EditTime(void)
         editstate = 0;
     }
 }
-void ControlCursor(void)
-{
 
-}
 void DisplayTime(void)
 {
-    TimeBuffer[0] = 48 + Time.Hours.digit1;
-    TimeBuffer[1] = 48 + Time.Hours.digit0;
-    TimeBuffer[2] = 58;
-    TimeBuffer[3] = 48 + Time.Minutes.digit1;
-    TimeBuffer[4] = 48 + Time.Minutes.digit0;
-    TimeBuffer[5] = 58;
-    TimeBuffer[6] = 48 + Time.Seconds.digit1;
-    TimeBuffer[7] = 48 + Time.Seconds.digit0;
-    LCD_writeStringAsyn(TimeBuffer, 8);
+    TimeString[0] = 48 + Time.Hours.digit1;
+    TimeString[1] = 48 + Time.Hours.digit0;
+    TimeString[2] = 58;
+    TimeString[3] = 48 + Time.Minutes.digit1;
+    TimeString[4] = 48 + Time.Minutes.digit0;
+    TimeString[5] = 58;
+    TimeString[6] = 48 + Time.Seconds.digit1;
+    TimeString[7] = 48 + Time.Seconds.digit0;
+    LCD_writeStringAsyn(TimeString, 8);
 }
 
 void DisplayDate()
@@ -665,18 +670,18 @@ void DisplayDate()
     Date.Year.digit1 = 2;
     Date.Year.digit2 = 0;
     Date.Year.digit3 = 2;
-    DateBuffer[0] = 48 + Date.Day.digit1;
-    DateBuffer[1] = 48 + Date.Day.digit0;
-    DateBuffer[2] = 45;
-    DateBuffer[3] = 48 + Date.Month.digit1;
-    DateBuffer[4] = 48 + Date.Month.digit0;
-    DateBuffer[5] = 45;
-    DateBuffer[6] = 48 + Date.Year.digit3;
-    DateBuffer[7] = 48 + Date.Year.digit2;
-    DateBuffer[8] = 48 + Date.Year.digit1;
-    DateBuffer[9] = 48 + Date.Year.digit0;
+    DateString[0] = 48 + Date.Day.digit1;
+    DateString[1] = 48 + Date.Day.digit0;
+    DateString[2] = 45;
+    DateString[3] = 48 + Date.Month.digit1;
+    DateString[4] = 48 + Date.Month.digit0;
+    DateString[5] = 45;
+    DateString[6] = 48 + Date.Year.digit3;
+    DateString[7] = 48 + Date.Year.digit2;
+    DateString[8] = 48 + Date.Year.digit1;
+    DateString[9] = 48 + Date.Year.digit0;
 
-    LCD_writeStringAsyn(DateBuffer, 10);
+    LCD_writeStringAsyn(DateString, 10);
 }
 
 void DisplayStopWatch(void)
@@ -707,3 +712,6 @@ void SwitchControl(void)
         }
     }
 }
+
+
+

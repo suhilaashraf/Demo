@@ -42,8 +42,7 @@ typedef struct
 
 /**************************Uart APIs PROTOTYPES************************************/
 
-ErrorStatus_t Uart_TxBufferAsync(uint8_t* buffer ,uint32_t len,void * UART_x);
-ErrorStatus_t Uart_RxBufferAsync(uint8_t* buffer ,uint32_t len,void * UART_x);
-ErrorStatus_t UartTx_done(void);
+void Uart_TxBufferAsync(uint8_t *buffer, uint32_t len, void *UART_x);
+void Uart_RxBufferAsync(uint8_t *buffer, uint32_t len, void *UART_x);
 
 #endif

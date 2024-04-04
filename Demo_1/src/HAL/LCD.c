@@ -37,6 +37,7 @@ uint8_t EN_status;
 uint8_t LCD_State;
 uint8_t init_State;
 uint8_t flag[4]={0};
+
 struct{
 	uint8_t type;
 	uint8_t state;
