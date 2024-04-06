@@ -20,9 +20,6 @@ int main()
   
  // GPIOPIN_t uarttx;
   GPIOPIN_t uartrx;
-
-  
-
   uartrx.gpioPORT =  GPIO_PORTB;
   uartrx.gpioPIN = GPIO_PIN7;
   uartrx.gpioMODE = GPIO_AF_PP;

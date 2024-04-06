@@ -1,20 +1,22 @@
 #include "Switch.h"
-#include"Uart.h"
+#include "Uart.h"
 #include "LCDinterface.h"
 #include "Demo.h"
 
-
 /***************************************************/
-#define Ascii0          48
-#define AsciiColon      58
-#define AsciiDash       45
-#define START           1
-#define PAUSE           2
-#define STOP            3
-#define Periodicity     50
-#define newline         15
-#define inc             1
-#define dec             2
+#define Ascii0 48
+#define AsciiColon 58
+#define AsciiDash 45
+#define START 1
+#define PAUSE 2
+#define STOP 3
+#define Periodicity 50
+#define newline 15
+#define inc 1
+#define dec 2
+
+#define MONTH   (Date.Month.digit0+Date.Month.digit1*10)
+#define DAY     (Date.Day.digit0+Date.Day.digit1*10)
 /***************************************************/
 
 enum
@@ -59,7 +61,7 @@ struct
 {
     uint8_t xPos;
     uint8_t yPos;
-}cursor;
+} cursor;
 
 /*************************Variables****************************/
 
@@ -71,22 +73,22 @@ uint8_t LCD_command = CURSOR1;
 uint8_t default_counter;
 uint8_t mode_counter;
 uint8_t EditTime_counter;
-uint8_t stopwatch_counter; 
+uint8_t stopwatch_counter;
 uint8_t stopwatchcounter;
 uint8_t stopwatchstate = STOP;
 uint8_t editstate;
 uint8_t arrowcounter;
 char DateString[] = "01-04-2024";
-//char *DateBuffer = DateString;
+// char *DateBuffer = DateString;
 char TimeString[10];
-//char *TimeBuffer = TimeString;
+// char *TimeBuffer = TimeString;
 char *StopWatchbuffer = TimeString;
 
 extern uint8_t ReceiveBuffer[1];
 
 /*************************Functions ProtoTypes****************************/
 void CurrDate(void);
-void CurrTime(void);
+void CurrDateAndTime(void);
 void DisplayTime(void);
 void DisplayDate(void);
 void Display_DefaultView();
@@ -97,20 +99,21 @@ void DisplayStopWatch(void);
 void Display_StopWatch(void);
 void Display_EditTime(void);
 void EditTime(void);
+void DisplayBlinkingTime(void);
+void DisplayBlinkingDate(void);
 
 /*****************************Implementation*******************************/
-
 
 void Demo_Runnable(void)
 {
     CurrentPressedSwitch = ReceiveBuffer[0];
-    CurrTime();
+    CurrDateAndTime();
     StopWatch();
     EditTime();
     Uart_RxBufferAsync(ReceiveBuffer, 1, UART_1);
     if (CurrentPressedSwitch != 0)
     {
-        ReceiveBuffer[0]=0;
+        ReceiveBuffer[0] = 0;
         LCD_clearScreenAsyn();
         switch (CurrentPressedSwitch)
         {
@@ -146,8 +149,9 @@ void Demo_Runnable(void)
                 stopwatchstate = START;
                 break;
             case EditTimeView:
+                EditTime_counter = 0;
                 editstate = inc;
-                break;    
+                break;
             default:
                 break;
             }
@@ -172,8 +176,9 @@ void Demo_Runnable(void)
                 }
                 break;
             case EditTimeView:
+                EditTime_counter = 0;
                 editstate = dec;
-                break;    
+                break;
             default:
                 break;
             }
@@ -182,39 +187,32 @@ void Demo_Runnable(void)
         case 'R':
             switch (CurrentWatchView)
             {
-            case EditTimeView: 
+            case EditTimeView:
+                EditTime_counter = 0;
                 arrowcounter++;
-                if (arrowcounter == 8)
+                if (arrowcounter == 14)
                 {
-                    arrowcounter =0;
-                }
-                else if (arrowcounter == 2 || arrowcounter == 5)
-                {
-                    arrowcounter++;
+                    arrowcounter = 0;
                 }
                 break;
-            
+
             default:
                 break;
             }
             break;
 
-
         case 'L':
             switch (CurrentWatchView)
             {
             case EditTimeView:
-                if (arrowcounter==0)
+                EditTime_counter = 0;
+                if (arrowcounter == 0)
                 {
-                    arrowcounter=8;
+                    arrowcounter = 14;
                 }
-                else if (arrowcounter == 3 || arrowcounter == 6)
-                {
-                    arrowcounter--;
-                } 
                 arrowcounter--;
                 break;
-            
+
             default:
                 break;
             }
@@ -250,7 +248,6 @@ void Demo_Runnable(void)
         }
     }
 }
-
 
 void WatchInit(void)
 {
@@ -329,18 +326,23 @@ void Display_EditTime(void)
     }
     if (EditTime_counter == 2)
     {
-        DisplayTime();
+        DisplayBlinkingDate();
+    }
+    if (EditTime_counter==3)
+    {
+        LCD_setCursorPosAsyn(1,0);
+    }
+    if (EditTime_counter==4)
+    {
+        DisplayBlinkingTime();
         EditTime_counter=0;
     }
+    
 }
-
-void CurrTime(void) // enter every 50 milliseconds
+ // enter every 50 milliseconds
+void CurrDateAndTime(void) // enter every 50 milliseconds
 {
     static uint32_t sec_counter = 0;
-    // if (sec_counter == 2 )
-    // {
-
-    // }
     if (sec_counter == 1000)
     {
         Time.Seconds.digit0++;
@@ -360,7 +362,7 @@ void CurrTime(void) // enter every 50 milliseconds
         }
         if (Time.Minutes.digit0 > 9)
         {
-            if (Time.Seconds.digit1 == 5)
+            if (Time.Minutes.digit1 == 5)
             {
                 Time.Minutes.digit0 = 0;
                 Time.Minutes.digit1 = 0;
@@ -376,73 +378,71 @@ void CurrTime(void) // enter every 50 milliseconds
         {
             Time.Hours.digit0 = 0;
             Time.Hours.digit1++;
-            if (Time.Hours.digit0 == 3 && Time.Hours.digit1 == 2)
-            {
-                Time.Hours.digit0 = 0;
-                Time.Hours.digit1 = 0;
-                CurrDate();
-            }
+        }
+        if (Time.Hours.digit0 > 3 && Time.Hours.digit1 == 2 && Time.Minutes.digit0 == 9 && Time.Minutes.digit1 == 5 && Time.Seconds.digit0 == 9 && Time.Seconds.digit1 == 5)
+        {
+            Time.Hours.digit0 = 0;
+            Time.Hours.digit1 = 0;
+            Date.Day.digit0++;
         }
         sec_counter = 0;
     }
-    sec_counter += Periodicity;
-}
 
 /* Function that calculate real date */
-void CurrDate(void)
-{
-    Date.Day.digit0++;
     if (Date.Day.digit0 == 9)
     {
         Date.Day.digit0 = 0;
         Date.Day.digit1++;
     }
-    if (Date.Month.digit0 % 2 || Date.Month.digit0 == 7 || (Date.Month.digit1 == 1 && (Date.Month.digit0 == 0 || Date.Month.digit0 == 2)))
+    if (MONTH==0)
     {
-        if (Date.Day.digit0 == 1 && Date.Day.digit1 == 3)
+        Date.Month.digit0=1;
+        Date.Month.digit1=0;
+    }
+    if (DAY==0)
+    {
+        Date.Day.digit0=1;
+        Date.Day.digit1=0;
+    }
+    if (DAY>29)
+    {
+        if (MONTH==2)
         {
             Date.Month.digit0++;
+            Date.Day.digit0=1;
+            Date.Day.digit1=0;
         }
     }
-    else if (Date.Month.digit0 == 2)
-    /* handle feb 29 days every 4 years*/
+    if (DAY>30)
     {
-        if (Date.Day.digit0 == 2 && Date.Day.digit1 == 8)
+        if (MONTH%2==0 && MONTH!=10 && MONTH != 12 )
         {
             Date.Month.digit0++;
+            Date.Day.digit0=1;
+            Date.Day.digit1=0;
         }
     }
-    else
+    if (DAY>31)
     {
-        if (Date.Day.digit0 == 0 && Date.Day.digit1 == 3)
+        if (MONTH%2 || MONTH == 10 || MONTH == 12 )
         {
             Date.Month.digit0++;
+            Date.Day.digit0=1;
+            Date.Day.digit1=0;
         }
+
     }
-    if (Date.Month.digit0 == 9)
+    if (Date.Month.digit0 == 9 && Date.Month.digit1 < 2)
     {
-        Date.Month.digit0 = 0;
+        Date.Month.digit0=0;
         Date.Month.digit1++;
-        if (Date.Month.digit0 == 2 && Date.Month.digit1 == 1)
-        {
-            Date.Year.digit0++;
-        }
     }
-    if (Date.Year.digit0 == 9)
+    if(MONTH > 12)
     {
-        Date.Year.digit0 = 0;
-        Date.Year.digit1++;
-        if (Date.Year.digit1 == 9)
-        {
-            Date.Year.digit1 = 0;
-            Date.Year.digit2++;
-            if (Date.Year.digit2 == 9)
-            {
-                Date.Year.digit2 = 0;
-                Date.Year.digit3++;
-            }
-        }
+        Date.Month.digit0 = 1;
+        Date.Month.digit1 = 0;
     }
+    sec_counter += Periodicity;
 }
 
 void StopWatch(void)
@@ -513,6 +513,86 @@ void EditTime(void)
         switch (arrowcounter)
         {
         case 0:
+            if (Date.Day.digit1 == 3)
+            {
+                Date.Day.digit1 = 0;
+            }
+            else
+            {
+                Date.Day.digit1++;
+            }
+            break;
+        case 1:
+            if (Date.Day.digit0 == 9)
+            {
+                Date.Day.digit0 = 0;
+            }
+            else
+            {
+                Date.Day.digit0++;
+            }
+            break;
+        case 2:
+            if (Date.Month.digit1 == 3)
+            {
+                Date.Month.digit1 = 0;
+            }
+            else
+            {
+                Date.Month.digit1++;
+            }
+            break;
+        case 3:
+            if (Date.Month.digit0 == 9)
+            {
+                Date.Month.digit0 = 0;
+            }
+            else
+            {
+                Date.Month.digit0++;
+            }
+            break;
+        case 4:
+            if (Date.Year.digit3 == 9)
+            {
+                Date.Year.digit3 = 0;
+            }
+            else
+            {
+                Date.Year.digit3++;
+            }
+            break;
+        case 5:
+            if (Date.Year.digit2 == 9)
+            {
+                Date.Year.digit2 = 0;
+            }
+            else
+            {
+                Date.Year.digit2++;
+            }
+            break;
+        case 6:
+            if (Date.Year.digit1 == 9)
+            {
+                Date.Year.digit1 = 0;
+            }
+            else
+            {
+                Date.Year.digit1++;
+            }
+            break;
+        case 7:
+            if (Date.Year.digit0 == 9)
+            {
+                Date.Year.digit0 = 0;
+            }
+            else
+            {
+                Date.Year.digit0++;
+            }
+            break;
+        case 8:
             if (Time.Hours.digit1 == 2)
             {
                 Time.Hours.digit1 = 0;
@@ -522,7 +602,7 @@ void EditTime(void)
                 Time.Hours.digit1++;
             }
             break;
-        case 1:
+        case 9:
             if (Time.Hours.digit0 == 9)
             {
                 Time.Hours.digit0 = 0;
@@ -531,8 +611,8 @@ void EditTime(void)
             {
                 Time.Hours.digit0++;
             }
-            break;   
-        case 3:
+            break;
+        case 10:
             if (Time.Minutes.digit1 == 5)
             {
                 Time.Minutes.digit1 = 0;
@@ -542,7 +622,7 @@ void EditTime(void)
                 Time.Minutes.digit1++;
             }
             break;
-        case 4:
+        case 11:
             if (Time.Minutes.digit0 == 9)
             {
                 Time.Minutes.digit0 = 0;
@@ -552,7 +632,7 @@ void EditTime(void)
                 Time.Minutes.digit0++;
             }
             break;
-        case 6:
+        case 12:
             if (Time.Seconds.digit1 == 5)
             {
                 Time.Seconds.digit1 = 0;
@@ -562,7 +642,7 @@ void EditTime(void)
                 Time.Seconds.digit1++;
             }
             break;
-        case 7:
+        case 13:
             if (Time.Seconds.digit0 == 9)
             {
                 Time.Seconds.digit0 = 0;
@@ -582,6 +662,86 @@ void EditTime(void)
         switch (arrowcounter)
         {
         case 0:
+            if (Date.Day.digit1 == 0)
+            {
+                Date.Day.digit1 = 3;
+            }
+            else
+            {
+                Date.Day.digit1--;
+            }
+            break;
+        case 1:
+            if (Date.Day.digit0 == 0)
+            {
+                Date.Day.digit0 = 9;
+            }
+            else
+            {
+                Date.Day.digit0--;
+            }
+            break;
+        case 2:
+            if (Date.Month.digit1 == 0)
+            {
+                Date.Month.digit1 = 3;
+            }
+            else
+            {
+                Date.Day.digit1--;
+            }
+            break;
+        case 3:
+            if (Date.Month.digit0 < 0)
+            {
+                Date.Month.digit0 = 9;
+            }
+            else
+            {
+                Date.Month.digit0--;
+            }
+            break;
+        case 4:
+            if (Date.Year.digit3 == 0)
+            {
+                Date.Year.digit3 = 9;
+            }
+            else
+            {
+                Date.Year.digit3--;
+            }
+            break;
+        case 5:
+            if (Date.Year.digit2 == 0)
+            {
+                Date.Year.digit2 = 9;
+            }
+            else
+            {
+                Date.Year.digit2--;
+            }
+            break;
+        case 6:
+            if (Date.Year.digit1 == 0)
+            {
+                Date.Year.digit1 = 9;
+            }
+            else
+            {
+                Date.Year.digit1--;
+            }
+            break;
+        case 7:
+            if (Date.Year.digit0 == 0)
+            {
+                Date.Year.digit0 = 9;
+            }
+            else
+            {
+                Date.Year.digit0--;
+            }
+            break;
+        case 8:
             if (Time.Hours.digit1 == 0)
             {
                 Time.Hours.digit1 = 2;
@@ -591,8 +751,7 @@ void EditTime(void)
                 Time.Hours.digit1--;
             }
             break;
-
-        case 1:
+        case 9:
             if (Time.Hours.digit0 == 0)
             {
                 Time.Hours.digit0 = 9;
@@ -602,7 +761,7 @@ void EditTime(void)
                 Time.Hours.digit0--;
             }
             break;
-        case 3:
+        case 10:
             if (Time.Minutes.digit1 == 0)
             {
                 Time.Minutes.digit1 = 5;
@@ -612,7 +771,7 @@ void EditTime(void)
                 Time.Minutes.digit1--;
             }
             break;
-        case 4:
+        case 11:
             if (Time.Minutes.digit0 == 0)
             {
                 Time.Minutes.digit0 = 9;
@@ -622,17 +781,17 @@ void EditTime(void)
                 Time.Minutes.digit0--;
             }
             break;
-        case 6:
-            if (Time.Seconds.digit1)
+        case 12:
+            if (Time.Seconds.digit1 == 0)
             {
-                Time.Seconds.digit1 = 5;
+                Time.Seconds.digit1 = 9;
             }
             else
             {
                 Time.Seconds.digit1--;
             }
             break;
-        case 7:
+        case 13:
             if (Time.Seconds.digit0 == 0)
             {
                 Time.Seconds.digit0 = 9;
@@ -662,14 +821,467 @@ void DisplayTime(void)
     LCD_writeStringAsyn(TimeString, 8);
 }
 
+void DisplayBlinkingDate(void)
+{
+    static uint8_t date_blink;
+    CurrDateAndTime();
+    switch (arrowcounter)
+    {
+    case 0:
+        if (date_blink < 10)
+        {
+            DateString[0] ='_';
+            DateString[1] = 48 + Date.Day.digit0;
+            DateString[2] = 45;
+            DateString[3] = 48 + Date.Month.digit1;
+            DateString[4] = 48 + Date.Month.digit0;
+            DateString[5] = 45;
+            DateString[6] = 48 + Date.Year.digit3;
+            DateString[7] = 48 + Date.Year.digit2;
+            DateString[8] = 48 + Date.Year.digit1;
+            DateString[9] = 48 + Date.Year.digit0;
+            date_blink++;
+        }
+        else if (date_blink >= 10)
+        {
+            DateString[0] = 48 + Date.Day.digit1;
+            DateString[1] = 48 + Date.Day.digit0;
+            DateString[2] = 45;
+            DateString[3] = 48 + Date.Month.digit1;
+            DateString[4] = 48 + Date.Month.digit0;
+            DateString[5] = 45;
+            DateString[6] = 48 + Date.Year.digit3;
+            DateString[7] = 48 + Date.Year.digit2;
+            DateString[8] = 48 + Date.Year.digit1;
+            DateString[9] = 48 + Date.Year.digit0;
+            date_blink--;
+        }
+        LCD_writeStringAsyn(DateString, 10);
+        break;
+    case 1:
+        if (date_blink < 10)
+        {
+            DateString[0] = 48 + Date.Day.digit1;
+            DateString[1] = '_';
+            DateString[2] = 45;
+            DateString[3] = 48 + Date.Month.digit1;
+            DateString[4] = 48 + Date.Month.digit0;
+            DateString[5] = 45;
+            DateString[6] = 48 + Date.Year.digit3;
+            DateString[7] = 48 + Date.Year.digit2;
+            DateString[8] = 48 + Date.Year.digit1;
+            DateString[9] = 48 + Date.Year.digit0;
+            date_blink++;
+        }
+        else if (date_blink >= 10)
+        {
+            DateString[0] = 48 + Date.Day.digit1;
+            DateString[1] = 48 + Date.Day.digit0;
+            DateString[2] = 45;
+            DateString[3] = 48 + Date.Month.digit1;
+            DateString[4] = 48 + Date.Month.digit0;
+            DateString[5] = 45;
+            DateString[6] = 48 + Date.Year.digit3;
+            DateString[7] = 48 + Date.Year.digit2;
+            DateString[8] = 48 + Date.Year.digit1;
+            DateString[9] = 48 + Date.Year.digit0;
+            date_blink--;
+        }
+        LCD_writeStringAsyn(DateString, 10);
+        break;
+    case 2:
+        if (date_blink < 10)
+        {
+            DateString[0] = 48 + Date.Day.digit1;
+            DateString[1] = 48 + Date.Day.digit0;
+            DateString[2] = 45;
+            DateString[3] = '_';
+            DateString[4] = 48 + Date.Month.digit0;
+            DateString[5] = 45;
+            DateString[6] = 48 + Date.Year.digit3;
+            DateString[7] = 48 + Date.Year.digit2;
+            DateString[8] = 48 + Date.Year.digit1;
+            DateString[9] = 48 + Date.Year.digit0;
+            date_blink++;
+        }
+        else if (date_blink >= 10)
+        {
+             DateString[0] = 48 + Date.Day.digit1;
+            DateString[1] = 48 + Date.Day.digit0;
+            DateString[2] = 45;
+            DateString[3] = 48 + Date.Month.digit1;
+            DateString[4] = 48 + Date.Month.digit0;
+            DateString[5] = 45;
+            DateString[6] = 48 + Date.Year.digit3;
+            DateString[7] = 48 + Date.Year.digit2;
+            DateString[8] = 48 + Date.Year.digit1;
+            DateString[9] = 48 + Date.Year.digit0;
+            date_blink--;
+        }
+        LCD_writeStringAsyn(DateString, 10);
+        break;
+    case 3:
+        if (date_blink < 10)
+        {
+             DateString[0] = 48 + Date.Day.digit1;
+            DateString[1] = 48 + Date.Day.digit0;
+            DateString[2] = 45;
+            DateString[3] = 48 + Date.Month.digit1;
+            DateString[4] =  '_';
+            DateString[5] = 45;
+            DateString[6] = 48 + Date.Year.digit3;
+            DateString[7] = 48 + Date.Year.digit2;
+            DateString[8] = 48 + Date.Year.digit1;
+            DateString[9] = 48 + Date.Year.digit0;
+            date_blink++;
+        }
+        else if (date_blink >= 10)
+        {
+             DateString[0] = 48 + Date.Day.digit1;
+            DateString[1] = 48 + Date.Day.digit0;
+            DateString[2] = 45;
+            DateString[3] = 48 + Date.Month.digit1;
+            DateString[4] = 48 + Date.Month.digit0;
+            DateString[5] = 45;
+            DateString[6] = 48 + Date.Year.digit3;
+            DateString[7] = 48 + Date.Year.digit2;
+            DateString[8] = 48 + Date.Year.digit1;
+            DateString[9] = 48 + Date.Year.digit0;
+            date_blink--;
+        }
+        LCD_writeStringAsyn(DateString, 10);
+        break;
+    case 4:
+     if (date_blink < 10)
+        {
+             DateString[0] = 48 + Date.Day.digit1;
+            DateString[1] = 48 + Date.Day.digit0;
+            DateString[2] = 45;
+            DateString[3] = 48 + Date.Month.digit1;
+            DateString[4] = 48 + Date.Month.digit0;
+            DateString[5] = 45;
+            DateString[6] = '_' + Date.Year.digit3;
+            DateString[7] = 48 + Date.Year.digit2;
+            DateString[8] = 48 + Date.Year.digit1;
+            DateString[9] = 48 + Date.Year.digit0;
+            date_blink++;
+        }
+        else if (date_blink >= 10)
+        {
+            DateString[0] = 48 + Date.Day.digit1;
+            DateString[1] = 48 + Date.Day.digit0;
+            DateString[2] = 45;
+            DateString[3] = 48 + Date.Month.digit1;
+            DateString[4] = 48 + Date.Month.digit0;
+            DateString[5] = 45;
+            DateString[6] = 48 + Date.Year.digit3;
+            DateString[7] = 48 + Date.Year.digit2;
+            DateString[8] = 48 + Date.Year.digit1;
+            DateString[9] = 48 + Date.Year.digit0;
+            date_blink--;
+        }
+        LCD_writeStringAsyn(DateString, 10);
+        break;
+    case 5:
+        if (date_blink < 10)
+        {
+             DateString[0] = 48 + Date.Day.digit1;
+            DateString[1] = 48 + Date.Day.digit0;
+            DateString[2] = 45;
+            DateString[3] = 48 + Date.Month.digit1;
+            DateString[4] = 48 + Date.Month.digit0;
+            DateString[5] = 45;
+            DateString[6] = 48 + Date.Year.digit3;
+            DateString[7] = '_';
+            DateString[8] = 48 + Date.Year.digit1;
+            DateString[9] = 48 + Date.Year.digit0;
+            date_blink++;
+        }
+        else if (date_blink >= 10)
+        {
+            DateString[0] = 48 + Date.Day.digit1;
+            DateString[1] = 48 + Date.Day.digit0;
+            DateString[2] = 45;
+            DateString[3] = 48 + Date.Month.digit1;
+            DateString[4] = 48 + Date.Month.digit0;
+            DateString[5] = 45;
+            DateString[6] = 48 + Date.Year.digit3;
+            DateString[7] = 48 + Date.Year.digit2;
+            DateString[8] = 48 + Date.Year.digit1;
+            DateString[9] = 48 + Date.Year.digit0;
+            date_blink--;
+        }
+        LCD_writeStringAsyn(DateString, 10);
+        break;
+    case 6:
+     if (date_blink < 10)
+        {
+            DateString[0] = 48 + Date.Day.digit1;
+            DateString[1] = 48 + Date.Day.digit0;
+            DateString[2] = 45;
+            DateString[3] = 48 + Date.Month.digit1;
+            DateString[4] = 48 + Date.Month.digit0;
+            DateString[5] = 45;
+            DateString[6] = 48 + Date.Year.digit3;
+            DateString[7] = 48 + Date.Year.digit2;
+            DateString[8] = '_';
+            DateString[9] = 48 + Date.Year.digit0;
+            date_blink++;
+        }
+        else if (date_blink >= 10)
+        {
+            DateString[0] = 48 + Date.Day.digit1;
+            DateString[1] = 48 + Date.Day.digit0;
+            DateString[2] = 45;
+            DateString[3] = 48 + Date.Month.digit1;
+            DateString[4] = 48 + Date.Month.digit0;
+            DateString[5] = 45;
+            DateString[6] = 48 + Date.Year.digit3;
+            DateString[7] = 48 + Date.Year.digit2;
+            DateString[8] = 48 + Date.Year.digit1;
+            DateString[9] = 48 + Date.Year.digit0;
+            date_blink--;
+        }
+        LCD_writeStringAsyn(DateString, 10);
+        break;
+        case 7:
+        if (date_blink < 10)
+        {
+            DateString[0] = 48 + Date.Day.digit1;
+            DateString[1] = 48 + Date.Day.digit0;
+            DateString[2] = 45;
+            DateString[3] = 48 + Date.Month.digit1;
+            DateString[4] = 48 + Date.Month.digit0;
+            DateString[5] = 45;
+            DateString[6] = 48 + Date.Year.digit3;
+            DateString[7] = 48 + Date.Year.digit2;
+            DateString[8] = 48 + Date.Year.digit1;
+            DateString[9] = '_';
+            date_blink++;
+        }
+        else if (date_blink >= 10)
+        {
+            DateString[0] = 48 + Date.Day.digit1;
+            DateString[1] = 48 + Date.Day.digit0;
+            DateString[2] = 45;
+            DateString[3] = 48 + Date.Month.digit1;
+            DateString[4] = 48 + Date.Month.digit0;
+            DateString[5] = 45;
+            DateString[6] = 48 + Date.Year.digit3;
+            DateString[7] = 48 + Date.Year.digit2;
+            DateString[8] = 48 + Date.Year.digit1;
+            DateString[9] = 48 + Date.Year.digit0;
+            date_blink--;
+        }
+        LCD_writeStringAsyn(DateString, 10);
+        break;
+
+    default:
+            DateString[0] = 48 + Date.Day.digit1;
+            DateString[1] = 48 + Date.Day.digit0;
+            DateString[2] = 45;
+            DateString[3] = 48 + Date.Month.digit1;
+            DateString[4] = 48 + Date.Month.digit0;
+            DateString[5] = 45;
+            DateString[6] = 48 + Date.Year.digit3;
+            DateString[7] = 48 + Date.Year.digit2;
+            DateString[8] = 48 + Date.Year.digit1;
+            DateString[9] = 48 + Date.Year.digit0;
+            LCD_writeStringAsyn(DateString,10);
+        break;
+    }
+    editstate = 0;
+}
+void DisplayBlinkingTime(void)
+{
+    static uint8_t time_blink;
+    switch (arrowcounter)
+    {
+    case 8:
+        if (time_blink < 10)
+        {
+            TimeString[0] = 48 + Time.Hours.digit1;
+            TimeString[1] = 48 + Time.Hours.digit0;
+            TimeString[2] = 58;
+            TimeString[3] = 48 + Time.Minutes.digit1;
+            TimeString[4] = 48 + Time.Minutes.digit0;
+            TimeString[5] = 58;
+            TimeString[6] = 48 + Time.Seconds.digit1;
+            TimeString[7] = 48 + Time.Seconds.digit0;
+            time_blink++;
+        }
+        else if (time_blink >= 10)
+        {
+            TimeString[0] = '_';
+            TimeString[1] = 48 + Time.Hours.digit0;
+            TimeString[2] = 58;
+            TimeString[3] = 48 + Time.Minutes.digit1;
+            TimeString[4] = 48 + Time.Minutes.digit0;
+            TimeString[5] = 58;
+            TimeString[6] = 48 + Time.Seconds.digit1;
+            TimeString[7] = 48 + Time.Seconds.digit0;
+            time_blink--;
+        }
+        LCD_writeStringAsyn(TimeString, 8);
+        break;
+    case 9:
+        if (time_blink < 10)
+        {
+            TimeString[0] = 48 + Time.Hours.digit1;
+            TimeString[1] = 48 + Time.Hours.digit0;
+            TimeString[2] = 58;
+            TimeString[3] = 48 + Time.Minutes.digit1;
+            TimeString[4] = 48 + Time.Minutes.digit0;
+            TimeString[5] = 58;
+            TimeString[6] = 48 + Time.Seconds.digit1;
+            TimeString[7] = 48 + Time.Seconds.digit0;
+            time_blink++;
+        }
+        else if (time_blink >= 10)
+        {
+            TimeString[0] = 48 + Time.Hours.digit1;
+            TimeString[1] = '_';
+            TimeString[2] = 58;
+            TimeString[3] = 48 + Time.Minutes.digit1;
+            TimeString[4] = 48 + Time.Minutes.digit0;
+            TimeString[5] = 58;
+            TimeString[6] = 48 + Time.Seconds.digit1;
+            TimeString[7] = 48 + Time.Seconds.digit0;
+            time_blink--;
+        }
+        LCD_writeStringAsyn(TimeString, 8);
+        break;
+    case 10:
+        if (time_blink < 10)
+        {
+            TimeString[0] = 48 + Time.Hours.digit1;
+            TimeString[1] = 48 + Time.Hours.digit0;
+            TimeString[2] = 58;
+            TimeString[3] = 48 + Time.Minutes.digit1;
+            TimeString[4] = 48 + Time.Minutes.digit0;
+            TimeString[5] = 58;
+            TimeString[6] = 48 + Time.Seconds.digit1;
+            TimeString[7] = 48 + Time.Seconds.digit0;
+            time_blink++;
+        }
+        else if (time_blink >= 10)
+        {
+            TimeString[0] = 48 + Time.Hours.digit1;
+            TimeString[1] = 48 + Time.Hours.digit0;
+            TimeString[2] = 58;
+            TimeString[3] = '_';
+            TimeString[4] = 48 + Time.Minutes.digit0;
+            TimeString[5] = 58;
+            TimeString[6] = 48 + Time.Seconds.digit1;
+            TimeString[7] = 48 + Time.Seconds.digit0;
+            time_blink--;
+        }
+        LCD_writeStringAsyn(TimeString, 8);
+        break;
+    case 11:
+        if (time_blink < 10)
+        {
+            TimeString[0] = 48 + Time.Hours.digit1;
+            TimeString[1] = 48 + Time.Hours.digit0;
+            TimeString[2] = 58;
+            TimeString[3] = 48 + Time.Minutes.digit1;
+            TimeString[4] = 48 + Time.Minutes.digit0;
+            TimeString[5] = 58;
+            TimeString[6] = 48 + Time.Seconds.digit1;
+            TimeString[7] = 48 + Time.Seconds.digit0;
+            time_blink++;
+        }
+        else if (time_blink >= 10)
+        {
+            TimeString[0] = 48 + Time.Hours.digit1;
+            TimeString[1] = 48 + Time.Hours.digit0;
+            TimeString[2] = 58;
+            TimeString[3] = 48 + Time.Minutes.digit1;
+            TimeString[4] = '_';
+            TimeString[5] = 58;
+            TimeString[6] = 48 + Time.Seconds.digit1;
+            TimeString[7] = 48 + Time.Seconds.digit0;
+            time_blink--;
+        }
+        LCD_writeStringAsyn(TimeString, 8);
+        break;
+    case 12:
+        if (time_blink < 10)
+        {
+            TimeString[0] = 48 + Time.Hours.digit1;
+            TimeString[1] = 48 + Time.Hours.digit0;
+            TimeString[2] = 58;
+            TimeString[3] = 48 + Time.Minutes.digit1;
+            TimeString[4] = 48 + Time.Minutes.digit0;
+            TimeString[5] = 58;
+            TimeString[6] = 48 + Time.Seconds.digit1;
+            TimeString[7] = 48 + Time.Seconds.digit0;
+            time_blink++;
+        }
+        else if (time_blink >= 10)
+        {
+            TimeString[0] = 48 + Time.Hours.digit1;
+            TimeString[1] = 48 + Time.Hours.digit0;
+            TimeString[2] = 58;
+            TimeString[3] = 48 + Time.Minutes.digit1;
+            TimeString[4] = 48 + Time.Minutes.digit0;
+            TimeString[5] = 58;
+            TimeString[6] = '_';
+            TimeString[7] = 48 + Time.Seconds.digit0;
+            time_blink--;
+        }
+        LCD_writeStringAsyn(TimeString, 8);
+        break;
+    case 13:
+        if (time_blink < 10)
+        {
+            TimeString[0] = 48 + Time.Hours.digit1;
+            TimeString[1] = 48 + Time.Hours.digit0;
+            TimeString[2] = 58;
+            TimeString[3] = 48 + Time.Minutes.digit1;
+            TimeString[4] = 48 + Time.Minutes.digit0;
+            TimeString[5] = 58;
+            TimeString[6] = 48 + Time.Seconds.digit1;
+            TimeString[7] = 48 + Time.Seconds.digit0;
+            time_blink++;
+        }
+        else if (time_blink >= 10)
+        {
+            TimeString[0] = 48 + Time.Hours.digit1;
+            TimeString[1] = 48 + Time.Hours.digit0;
+            TimeString[2] = 58;
+            TimeString[3] = 48 + Time.Minutes.digit1;
+            TimeString[4] = 48 + Time.Minutes.digit0;
+            TimeString[5] = 58;
+            TimeString[6] = 48 + Time.Seconds.digit1;
+            TimeString[7] = '_';
+            time_blink--;
+        }
+        LCD_writeStringAsyn(TimeString, 8);
+        break;
+    default:
+            TimeString[0] = 48 + Time.Hours.digit1;
+            TimeString[1] = 48 + Time.Hours.digit0;
+            TimeString[2] = 58;
+            TimeString[3] = 48 + Time.Minutes.digit1;
+            TimeString[4] = 48 + Time.Minutes.digit0;
+            TimeString[5] = 58;
+            TimeString[6] = 48 + Time.Seconds.digit1;
+            TimeString[7] = 48 + Time.Seconds.digit0;
+            LCD_writeStringAsyn(TimeString, 8);
+        break;
+    }
+    editstate = 0;
+}
+
 void DisplayDate()
 {
-    Date.Day.digit0 = 5;
-    Date.Month.digit0 = 4;
-    Date.Year.digit0 = 4;
-    Date.Year.digit1 = 2;
-    Date.Year.digit2 = 0;
-    Date.Year.digit3 = 2;
+    // Date.Day.digit0 = 5;
+    // Date.Month.digit0 = 4;
+    // Date.Year.digit0 = 4;
+    // Date.Year.digit1 = 2;
+    // Date.Year.digit2 = 0;
+    // Date.Year.digit3 = 2;
     DateString[0] = 48 + Date.Day.digit1;
     DateString[1] = 48 + Date.Day.digit0;
     DateString[2] = 45;
@@ -712,6 +1324,3 @@ void SwitchControl(void)
         }
     }
 }
-
-
-
