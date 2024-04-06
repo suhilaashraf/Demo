@@ -39,10 +39,11 @@ typedef struct
     uint8_t state;
     void* UART_X;
 } RxReq;
-
+typedef void (*Txcb_t)(void);
+typedef void (*Rxcb_t)(void);
 /**************************Uart APIs PROTOTYPES************************************/
 
-void Uart_TxBufferAsync(uint8_t *buffer, uint32_t len, void *UART_x);
-void Uart_RxBufferAsync(uint8_t *buffer, uint32_t len, void *UART_x);
+void Uart_TxBufferAsync(uint8_t *buffer, uint32_t len, void *UART_x,Txcb_t cb);
+void Uart_RxBufferAsync(uint8_t *buffer, uint32_t len, void *UART_x,Rxcb_t cb);
 
 #endif

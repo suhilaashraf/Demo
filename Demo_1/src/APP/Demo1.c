@@ -1310,17 +1310,32 @@ void DisplayStopWatch(void)
 }
 
 void SwitchControl(void)
-{
+{   
+    static uint8_t switch_counter;
+    switch_counter++;
     uint16_t modestatus;
     uint8_t idx;
     CurrentPressedSwitch = _SWITCH_NUM;
-    for (idx = 0; idx < _SWITCH_NUM; idx++)
-    {
-        SWITCH_GETSTATUS(idx, &modestatus);
-        if (modestatus == SWITCH_PRESSED)
-        {
-            CurrentPressedSwitch = idx;
-            idx = _SWITCH_NUM; /*handle the case with multiple pressed switches*/
-        }
-    }
+    // for (idx = 0; idx < _SWITCH_NUM; idx++)
+    // {
+    //     SWITCH_GETSTATUS(idx, &modestatus);
+    //     if (modestatus == SWITCH_PRESSED)
+    //     {
+    //         CurrentPressedSwitch = idx;
+    //         idx = _SWITCH_NUM; /*handle the case with multiple pressed switches*/
+    //     }
+    // }
+    // if (switch_counter==1)
+    // {
+    //     switch (CurrentPressedSwitch)
+    //     {
+    //     case /* constant-expression */:
+    //         /* code */
+    //         break;
+        
+    //     default:
+    //         break;
+    //     }
+    //     Uart_TxBufferAsync("")
+    // }
 }

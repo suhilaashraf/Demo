@@ -31,7 +31,34 @@ typedef struct Uart
     uint32_t GTPR;
 } Uart_t;
 
+typedef struct
+{
+    uint8_t* data;
+    uint32_t pos;
+    uint32_t size;
+} buffer_t;
 
+typedef enum
+{
+    Ready,
+    Busy
+} ReqState;
+
+typedef struct
+{
+    buffer_t buffer;
+    uint8_t state;
+    void* UART_X;
+    Txcb_t cbf;
+} TxReq;
+
+typedef struct
+{
+    buffer_t buffer;
+    uint8_t state;
+    void* UART_X;
+    Rxcb_t cbf;
+} RxReq;
 /***********************UART VARIABLES**************************************/
 
 TxReq TxUserRequest;
@@ -95,7 +122,7 @@ ErrorStatus_t UartRx_Cfg(void)
 
 
 
-void Uart_TxBufferAsync(uint8_t *buffer, uint32_t len, void *UART_x)
+void Uart_TxBufferAsync(uint8_t *buffer, uint32_t len, void *UART_x,Txcb_t cb)
 {
     if (TxUserRequest.state == Ready)
     {
@@ -103,13 +130,14 @@ void Uart_TxBufferAsync(uint8_t *buffer, uint32_t len, void *UART_x)
             TxUserRequest.buffer.pos = 0;
             TxUserRequest.buffer.size = len;
             TxUserRequest.UART_X = UART_x;
+            TxUserRequest.cbf=cb;
             TxUserRequest.buffer.data = buffer;
             UartTx_Cfg();
             ((Uart_t *)TxUserRequest.UART_X)->CR1 |= Uart_TXEIE;
     }
 }
 
-void Uart_RxBufferAsync(uint8_t *buffer, uint32_t len, void *UART_x)
+void Uart_RxBufferAsync(uint8_t *buffer, uint32_t len, void *UART_x, Rxcb_t cb)
 {
     if (RxUserRequest.state == Ready)
     {
@@ -117,6 +145,7 @@ void Uart_RxBufferAsync(uint8_t *buffer, uint32_t len, void *UART_x)
         RxUserRequest.buffer.pos = 0;
         RxUserRequest.state = Busy;
         RxUserRequest.UART_X = UART_x;
+        RxUserRequest.cbf=cb;
         RxUserRequest.buffer.data = buffer;
         UartRx_Cfg();
         ((Uart_t *)RxUserRequest.UART_X)->CR1 |= Uart_RXNEIE;
@@ -137,6 +166,10 @@ void Uart_Hnadler(void)
             else
             {
                 TxUserRequest.state = Ready;
+                if (TxUserRequest.cbf)
+                {
+                    TxUserRequest.cbf();
+                }
                 ((Uart_t *)TxUserRequest.UART_X)->CR1 &= ~Uart_TXEIE;
             }
         }
@@ -156,7 +189,12 @@ void Uart_Hnadler(void)
         }
         else
         {
+            if (RxUserRequest.cbf)
+            {
+                RxUserRequest.cbf();
+            }
             RxUserRequest.state = Ready;
+
         }
     }
 }
