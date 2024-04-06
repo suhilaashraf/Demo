@@ -85,6 +85,9 @@ char TimeString[10];
 char *StopWatchbuffer = TimeString;
 
 extern uint8_t ReceiveBuffer[1];
+uint8_t SendBuffer [1];
+uint8_t Txflag;
+
 
 /*************************Functions ProtoTypes****************************/
 void CurrDate(void);
@@ -101,6 +104,7 @@ void Display_EditTime(void);
 void EditTime(void);
 void DisplayBlinkingTime(void);
 void DisplayBlinkingDate(void);
+void Txcb(void);
 
 /*****************************Implementation*******************************/
 
@@ -110,7 +114,7 @@ void Demo_Runnable(void)
     CurrDateAndTime();
     StopWatch();
     EditTime();
-    Uart_RxBufferAsync(ReceiveBuffer, 1, UART_1);
+    //Uart_RxBufferAsync(ReceiveBuffer, 1, UART_1);
     if (CurrentPressedSwitch != 0)
     {
         ReceiveBuffer[0] = 0;
@@ -1309,13 +1313,13 @@ void DisplayStopWatch(void)
     LCD_writeStringAsyn(StopWatchbuffer, 8);
 }
 
-void SwitchControl(void)
-{   
-    static uint8_t switch_counter;
-    switch_counter++;
-    uint16_t modestatus;
-    uint8_t idx;
-    CurrentPressedSwitch = _SWITCH_NUM;
+// void SwitchControl(void)
+// {   
+    // static uint8_t switch_counter;
+    // switch_counter++;
+    // uint16_t modestatus;
+    // uint8_t idx;
+    // CurrentPressedSwitch = _SWITCH_NUM;
     // for (idx = 0; idx < _SWITCH_NUM; idx++)
     // {
     //     SWITCH_GETSTATUS(idx, &modestatus);
@@ -1337,5 +1341,31 @@ void SwitchControl(void)
     //         break;
     //     }
     //     Uart_TxBufferAsync("")
-    // }
+//     // }
+// }
+
+void SwitchControl(void)
+{
+    uint16_t modestatus;
+    uint8_t idx;
+    CurrentPressedSwitch = _SWITCH_NUM;
+    for (idx = 0; idx < _SWITCH_NUM; idx++)
+    {
+        SWITCH_GETSTATUS(idx, &modestatus);
+        if (modestatus == SWITCH_PRESSED)
+        {
+            CurrentPressedSwitch = idx;
+            idx = _SWITCH_NUM; /*handle the case with multiple pressed switches*/
+        }
+    }
+    SendBuffer[0]= CurrentPressedSwitch;
+    Txflag =0;
+    Uart_TxBufferAsync(SendBuffer,1,UART_1,Txcb);
+
+}
+
+void Txcb (void)
+{
+    Uart_RxBufferAsync(ReceiveBuffer,1,UART_1,NULL);
+    Txflag =1;
 }

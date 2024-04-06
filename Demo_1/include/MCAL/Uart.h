@@ -13,32 +13,7 @@
 #define UART_6          (void *)0x40011400
 
 /**************************Uart Registers************************************/
-typedef struct
-{
-    uint8_t* data;
-    uint32_t pos;
-    uint32_t size;
-} buffer_t;
 
-typedef enum
-{
-    Ready,
-    Busy
-} ReqState;
-
-typedef struct
-{
-    buffer_t buffer;
-    uint8_t state;
-    void* UART_X;
-} TxReq;
-
-typedef struct
-{
-    buffer_t buffer;
-    uint8_t state;
-    void* UART_X;
-} RxReq;
 typedef void (*Txcb_t)(void);
 typedef void (*Rxcb_t)(void);
 /**************************Uart APIs PROTOTYPES************************************/
