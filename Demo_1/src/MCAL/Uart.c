@@ -133,7 +133,7 @@ void Uart_TxBufferAsync(uint8_t *buffer, uint32_t len, void *UART_x,Txcb_t cb)
             TxUserRequest.cbf=cb;
             TxUserRequest.buffer.data = buffer;
             UartTx_Cfg();
- //           ((Uart_t *)TxUserRequest.UART_X)->CR1 |= Uart_TXEIE;
+            ((Uart_t *)TxUserRequest.UART_X)->CR1 |= Uart_TXEIE;
     }
 }
 
@@ -217,6 +217,8 @@ void Uart_Hnadler(void)
                 if(TxUserRequest.buffer.pos == TxUserRequest.buffer.size)
                 {
                     TxUserRequest.state = Ready;
+                    ((Uart_t *)TxUserRequest.UART_X)->CR1 &= ~Uart_TXEIE;
+
                 }               
             }
             else
@@ -226,7 +228,7 @@ void Uart_Hnadler(void)
                 {
                     TxUserRequest.cbf();
                 }
-                ((Uart_t *)TxUserRequest.UART_X)->CR1 &= ~Uart_TXEIE;
+               ((Uart_t *)TxUserRequest.UART_X)->CR1 &= ~Uart_TXEIE;
             }
         }
     }
@@ -240,6 +242,7 @@ void Uart_Hnadler(void)
             if(RxUserRequest.buffer.pos == RxUserRequest.buffer.size)
             {
                 RxUserRequest.state = Ready;
+                ((Uart_t *)RxUserRequest.UART_X)->CR1 &= ~Uart_RXNEIE;
 
             }
         }

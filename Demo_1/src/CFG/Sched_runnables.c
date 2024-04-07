@@ -32,13 +32,6 @@ Runnable_t Runnables_info [RUNNABLES_NUM]=
         .cbf = SWITCH_Runabble,
         .FirstDelay=0,
     },
-    [3] =
-    {
-        .name = "uart runnable",
-        .periodicity_ms = 100,
-        .cbf =Uart_TxRunnable,
-        .FirstDelay=5,       
-    },
 /*    [4]=
     {
         .name = "uart runnable",

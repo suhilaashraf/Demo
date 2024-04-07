@@ -14,6 +14,11 @@
 #define newline 15
 #define inc 1
 #define dec 2
+#define send    1
+#define receive 2
+
+#define READY   0x0A
+#define BUSY    0x0B
 
 #define MONTH   (Date.Month.digit0+Date.Month.digit1*10)
 #define DAY     (Date.Day.digit0+Date.Day.digit1*10)
@@ -79,14 +84,12 @@ uint8_t stopwatchstate = STOP;
 uint8_t editstate;
 uint8_t arrowcounter;
 char DateString[] = "01-04-2024";
-// char *DateBuffer = DateString;
 char TimeString[10];
-// char *TimeBuffer = TimeString;
 char *StopWatchbuffer = TimeString;
-uint8_t ReceiveBuffer[1];
+uint8_t ReceiveBuffer[1]={5};
 uint8_t SendBuffer [1];
 uint8_t Txflag;
-
+uint8_t uart_state;
 
 /*************************Functions ProtoTypes****************************/
 void CurrDate(void);
@@ -106,21 +109,65 @@ void DisplayBlinkingDate(void);
 void Uart_Req (void);
 
 /*****************************Implementation*******************************/
-
+void SwitchControl(void)
+{
+    uint16_t modestatus;
+    uint8_t idx;
+    CurrentPressedSwitch = _SWITCH_NUM;
+    for (idx = 0; idx < _SWITCH_NUM; idx++)
+    {
+        SWITCH_GETSTATUS(idx, &modestatus);
+        if (modestatus == SWITCH_PRESSED)
+        {
+            CurrentPressedSwitch = idx;
+            idx = _SWITCH_NUM; 
+            SendBuffer[0]=CurrentPressedSwitch;
+            Uart_TxBufferAsync(SendBuffer,1,UART_1,NULL);
+        }
+    }
+    
+}
+void UART_control()
+{
+    static uint8_t uart_counter;
+    uart_counter++;
+    if (uart_counter==1)
+    {
+        uart_state=send;
+        SendBuffer[0]=BUSY;
+        ReceiveBuffer[0]=0;
+        Uart_TxBufferAsync(SendBuffer,2,UART_1,NULL);
+    }
+    else if (uart_counter==2)
+    {
+        uart_state=receive;
+        SendBuffer[0] = READY;
+        ReceiveBuffer[0]=0;
+        Uart_TxBufferAsync(SendBuffer, 2, UART_1,NULL);
+    }
+    else if (uart_counter==3)
+    {
+        uart_state=receive;
+        Uart_RxBufferAsync(ReceiveBuffer, 1, UART_1,NULL);
+        uart_counter=0;
+    }
+}
 void Demo_Runnable(void)
 {
-    Uart_RxBufferAsync(ReceiveBuffer,1,UART_1,NULL);
+    uint8_t byte;
     SwitchControl();
-    Uart_Req();
-    CurrentPressedSwitch = ReceiveBuffer[0];
+    Uart_RxBufferAsync(ReceiveBuffer, 1, UART_1,NULL);
+    //UART_control();
+    byte = ReceiveBuffer[0];
     CurrDateAndTime();
     StopWatch();
     EditTime();
-    if (CurrentPressedSwitch != 0)
+
+    if (byte != 0)
     {
-        ReceiveBuffer[0] = 0;
         LCD_clearScreenAsyn();
-        switch (CurrentPressedSwitch)
+        ReceiveBuffer[0]=0;
+        switch (byte)
         {
         case 'M':
             switch (CurrentWatchView)
@@ -228,7 +275,7 @@ void Demo_Runnable(void)
         }
     }
 
-    if (CurrentPressedSwitch == 0)
+    if (byte ==0)
     {
         switch (CurrentWatchView)
         {
@@ -1314,56 +1361,4 @@ void DisplayStopWatch(void)
     LCD_writeStringAsyn(StopWatchbuffer, 8);
 }
 
-// void SwitchControl(void)
-// {   
-    // static uint8_t switch_counter;
-    // switch_counter++;
-    // uint16_t modestatus;
-    // uint8_t idx;
-    // CurrentPressedSwitch = _SWITCH_NUM;
-    // for (idx = 0; idx < _SWITCH_NUM; idx++)
-    // {
-    //     SWITCH_GETSTATUS(idx, &modestatus);
-    //     if (modestatus == SWITCH_PRESSED)
-    //     {
-    //         CurrentPressedSwitch = idx;
-    //         idx = _SWITCH_NUM; /*handle the case with multiple pressed switches*/
-    //     }
-    // }
-    // if (switch_counter==1)
-    // {
-    //     switch (CurrentPressedSwitch)
-    //     {
-    //     case /* constant-expression */:
-    //         /* code */
-    //         break;
-        
-    //     default:
-    //         break;
-    //     }
-    //     Uart_TxBufferAsync("")
-//     // }
-// }
 
-void SwitchControl(void)
-{
-    uint16_t modestatus;
-    uint8_t idx;
-    CurrentPressedSwitch = _SWITCH_NUM;
-    for (idx = 0; idx < _SWITCH_NUM; idx++)
-    {
-        SWITCH_GETSTATUS(idx, &modestatus);
-        if (modestatus == SWITCH_PRESSED)
-        {
-            CurrentPressedSwitch = idx;
-            idx = _SWITCH_NUM; 
-        }
-    }
-    SendBuffer[0]= CurrentPressedSwitch;
-}
-
-
-void Uart_Req (void)
-{
-    Uart_TxBufferAsync(SendBuffer,1,UART_1,NULL);
-}
