@@ -4,6 +4,10 @@
 void LCD_task();
 void Demo_Runnable(void);
 void SWITCH_Runabble(void);
+void SwitchControl(void);
+void Uart_Runnable (void);
+void Uart_TxRunnable(void);
+void Uart_RxRunnable(void);
 
 Runnable_t Runnables_info [RUNNABLES_NUM]=
 {
@@ -14,71 +18,44 @@ Runnable_t Runnables_info [RUNNABLES_NUM]=
         .cbf = LCD_task,
         .FirstDelay=0,
     },
-    [2]=
+    [1]=
     {
         .name = "Demo1",
         .periodicity_ms = 50,
         .cbf = Demo_Runnable,
-        .FirstDelay=10,
+        .FirstDelay=3,
     },
-    [1]=
+    [2]=
     {
         .name = "Switch",
         .periodicity_ms = 5,
         .cbf = SWITCH_Runabble,
         .FirstDelay=0,
-    }
-
-
-/*
-   [1]=
-    {
-        .name = "Demo1",
-        .periodicity_ms = 500,
-        .priority = 1,
-        .cbf = Deafult_WatchViewRunnable,
     },
-    [2]=
+    [3] =
     {
-        .name = "Switch",
-        .periodicity_ms = 5,
-        .priority = 2,
-        .cbf = SWITCH_Runabble,
+        .name = "uart runnable",
+        .periodicity_ms = 100,
+        .cbf =Uart_TxRunnable,
+        .FirstDelay=5,       
+    },
+/*    [4]=
+    {
+        .name = "uart runnable",
+        .periodicity_ms = 100,
+        .cbf =Uart_TxRunnable,
+        .FirstDelay=0,          
+    }
+  [3]=
+    {
+        .name = "Switch control",
+        .periodicity_ms = 50,
+        .cbf =SwitchControl,
+        .FirstDelay=0,       
     },*/
 };
 
 
-   
-   /* [0]=
-    {
-        .name = "Traffic",
-        .periodicity_ms = 1000,
-        .priority = 0,
-        .cbf = Traffic_Runnable,
-    },
-    
-    
 
-    [1] =
-    {
-        .name = "APP1",
-        .periodicity_ms = 50,
-        .priority = 1,
-        .cbf = APP1,
-    }
-    
-        [0] =
-    {
-        .name = "Uart_TxBuffer",
-        .periodicity_ms = 1,
-        .priority = 0,
-        .cbf = Uart_TxBuffer,
-    },    
-    [1]=
-    {
-        .name = "Uart_RxBuffer",
-        .periodicity_ms = 1,
-        .priority = 1,
-        .cbf = Uart_Rxbuffer,
-    },   */
+
     

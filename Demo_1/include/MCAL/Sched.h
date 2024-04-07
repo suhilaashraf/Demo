@@ -9,7 +9,7 @@
 #include "Errors.h"
 #include "systick.h"
 
-#define RUNNABLES_NUM 3
+#define RUNNABLES_NUM 4
 #define SCH_TICKS_MS 1
 
 typedef void (*Runnable_Cb_t)(void);

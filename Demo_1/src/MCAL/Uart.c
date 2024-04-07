@@ -133,7 +133,7 @@ void Uart_TxBufferAsync(uint8_t *buffer, uint32_t len, void *UART_x,Txcb_t cb)
             TxUserRequest.cbf=cb;
             TxUserRequest.buffer.data = buffer;
             UartTx_Cfg();
-            ((Uart_t *)TxUserRequest.UART_X)->CR1 |= Uart_TXEIE;
+ //           ((Uart_t *)TxUserRequest.UART_X)->CR1 |= Uart_TXEIE;
     }
 }
 
@@ -152,6 +152,58 @@ void Uart_RxBufferAsync(uint8_t *buffer, uint32_t len, void *UART_x, Rxcb_t cb)
     }
 }
 
+void Uart_TxRunnable(void)
+{
+    if (TxUserRequest.state == Busy)
+    {
+        if (((Uart_t *)TxUserRequest.UART_X)->SR & Uart_TXE)
+        {
+            if (TxUserRequest.buffer.pos < TxUserRequest.buffer.size)
+            {
+                ((Uart_t *)TxUserRequest.UART_X)->DR = TxUserRequest.buffer.data[TxUserRequest.buffer.pos];
+                TxUserRequest.buffer.pos++;
+                if (TxUserRequest.buffer.pos == TxUserRequest.buffer.size)
+                {
+                    TxUserRequest.state = Ready;
+                    if (TxUserRequest.cbf)
+                    {
+                        TxUserRequest.cbf();
+                    }
+                }
+            }
+            else
+            {
+                TxUserRequest.state = Ready;
+            }
+        }
+    }
+}
+
+void Uart_RxRunnable(void)
+{
+    if (RxUserRequest.state == Busy)
+    {
+        if (RxUserRequest.buffer.pos < RxUserRequest.buffer.size)
+        {
+
+            RxUserRequest.buffer.data[RxUserRequest.buffer.pos] = ((Uart_t *)RxUserRequest.UART_X)->DR;
+            RxUserRequest.buffer.pos++;
+            if (RxUserRequest.buffer.pos == RxUserRequest.buffer.size)
+            {
+                RxUserRequest.state = Ready;
+            }
+        }
+        else
+        {
+            if (RxUserRequest.cbf)
+            {
+                RxUserRequest.cbf();
+            }
+            RxUserRequest.state = Ready;
+        }
+    }
+}
+
 void Uart_Hnadler(void)
 {
     if (TxUserRequest.state == Busy)
@@ -162,6 +214,10 @@ void Uart_Hnadler(void)
             {
                 ((Uart_t *)TxUserRequest.UART_X)->DR = TxUserRequest.buffer.data[TxUserRequest.buffer.pos];
                 TxUserRequest.buffer.pos++;
+                if(TxUserRequest.buffer.pos == TxUserRequest.buffer.size)
+                {
+                    TxUserRequest.state = Ready;
+                }               
             }
             else
             {

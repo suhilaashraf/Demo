@@ -6,7 +6,7 @@
 #include "Uart.h"
 #include "NVIC.h"
 
-uint8_t ReceiveBuffer[1];
+//uint8_t ReceiveBuffer[1];
 //uint8_t myData[1];
 int main()
 {
@@ -18,7 +18,7 @@ int main()
 
 
   
- // GPIOPIN_t uarttx;
+  GPIOPIN_t uarttx;
   GPIOPIN_t uartrx;
   uartrx.gpioPORT =  GPIO_PORTB;
   uartrx.gpioPIN = GPIO_PIN7;
@@ -26,8 +26,15 @@ int main()
   uartrx.GPIO_AF = GPIO_AF_USART1_2;
   uartrx.gpioSPEED=GPIO_HIGHSPEED;
 
+  uarttx.gpioPORT =  GPIO_PORTB;
+  uarttx.gpioPIN = GPIO_PIN6;
+  uarttx.gpioMODE = GPIO_AF_PP;
+  uarttx.GPIO_AF = GPIO_AF_USART1_2;
+  uarttx.gpioSPEED=GPIO_HIGHSPEED;
+
   GPIO_InitPin(&uartrx);
- // GPIO_InitPin(&uarttx);
+  GPIO_InitPin(&uarttx);
+
  // Uart_TxBufferAsync(myData, 7, UART_1);
 
   WatchInit();

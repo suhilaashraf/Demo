@@ -83,8 +83,7 @@ char DateString[] = "01-04-2024";
 char TimeString[10];
 // char *TimeBuffer = TimeString;
 char *StopWatchbuffer = TimeString;
-
-extern uint8_t ReceiveBuffer[1];
+uint8_t ReceiveBuffer[1];
 uint8_t SendBuffer [1];
 uint8_t Txflag;
 
@@ -104,17 +103,19 @@ void Display_EditTime(void);
 void EditTime(void);
 void DisplayBlinkingTime(void);
 void DisplayBlinkingDate(void);
-void Txcb(void);
+void Uart_Req (void);
 
 /*****************************Implementation*******************************/
 
 void Demo_Runnable(void)
 {
+    Uart_RxBufferAsync(ReceiveBuffer,1,UART_1,NULL);
+    SwitchControl();
+    Uart_Req();
     CurrentPressedSwitch = ReceiveBuffer[0];
     CurrDateAndTime();
     StopWatch();
     EditTime();
-    //Uart_RxBufferAsync(ReceiveBuffer, 1, UART_1);
     if (CurrentPressedSwitch != 0)
     {
         ReceiveBuffer[0] = 0;
@@ -1355,17 +1356,14 @@ void SwitchControl(void)
         if (modestatus == SWITCH_PRESSED)
         {
             CurrentPressedSwitch = idx;
-            idx = _SWITCH_NUM; /*handle the case with multiple pressed switches*/
+            idx = _SWITCH_NUM; 
         }
     }
     SendBuffer[0]= CurrentPressedSwitch;
-    Txflag =0;
-    Uart_TxBufferAsync(SendBuffer,1,UART_1,Txcb);
-
 }
 
-void Txcb (void)
+
+void Uart_Req (void)
 {
-    Uart_RxBufferAsync(ReceiveBuffer,1,UART_1,NULL);
-    Txflag =1;
+    Uart_TxBufferAsync(SendBuffer,1,UART_1,NULL);
 }
