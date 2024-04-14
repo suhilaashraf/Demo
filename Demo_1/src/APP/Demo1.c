@@ -22,6 +22,7 @@
 
 #define MONTH   (Date.Month.digit0+Date.Month.digit1*10)
 #define DAY     (Date.Day.digit0+Date.Day.digit1*10)
+#define NotPressed     6
 /***************************************************/
 
 enum
@@ -86,7 +87,7 @@ uint8_t arrowcounter;
 char DateString[] = "01-04-2024";
 char TimeString[10];
 char *StopWatchbuffer = TimeString;
-uint8_t ReceiveBuffer[1]={5};
+uint8_t ReceiveBuffer[1]={NotPressed};
 uint8_t SendBuffer [1];
 uint8_t Txflag;
 uint8_t uart_state;
@@ -111,22 +112,27 @@ void Uart_Req (void);
 /*****************************Implementation*******************************/
 void SwitchControl(void)
 {
+    static uint8_t counter;
     uint16_t modestatus;
     uint8_t idx;
-    CurrentPressedSwitch = _SWITCH_NUM;
-    for (idx = 0; idx < _SWITCH_NUM; idx++)
+    counter++;
+    if (counter == 3)
     {
-        SWITCH_GETSTATUS(idx, &modestatus);
-        if (modestatus == SWITCH_PRESSED)
+        counter = 0;
+        for (idx = 0; idx < _SWITCH_NUM; idx++)
         {
-            CurrentPressedSwitch = idx;
-            idx = _SWITCH_NUM; 
-            SendBuffer[0]=CurrentPressedSwitch;
-            Uart_TxBufferAsync(SendBuffer,1,UART_1,NULL);
+            SWITCH_GETSTATUS(idx, &modestatus);
+            if (modestatus == SWITCH_PRESSED)
+            {
+                CurrentPressedSwitch = idx;
+                idx = _SWITCH_NUM;
+                SendBuffer[0] = CurrentPressedSwitch;
+                Uart_TxBufferAsync(SendBuffer, 1, UART_1, NULL);
+            }
         }
     }
-    
 }
+
 void UART_control()
 {
     static uint8_t uart_counter;
@@ -154,22 +160,21 @@ void UART_control()
 }
 void Demo_Runnable(void)
 {
-    uint8_t byte;
+    static uint8_t byte = NotPressed;
     SwitchControl();
     Uart_RxBufferAsync(ReceiveBuffer, 1, UART_1,NULL);
-    //UART_control();
     byte = ReceiveBuffer[0];
     CurrDateAndTime();
     StopWatch();
     EditTime();
 
-    if (byte != 0)
+    if (byte !=  NotPressed )
     {
         LCD_clearScreenAsyn();
-        ReceiveBuffer[0]=0;
+        ReceiveBuffer[0]= NotPressed;
         switch (byte)
         {
-        case 'M':
+        case 4:
             switch (CurrentWatchView)
             {
             case DefaultView:
@@ -190,7 +195,7 @@ void Demo_Runnable(void)
                 break;
             }
             break;
-        case 'U':
+        case 1:
             switch (CurrentWatchView)
             {
             case ModeView:
@@ -208,7 +213,7 @@ void Demo_Runnable(void)
                 break;
             }
             break;
-        case 'D':
+        case 2:
             switch (CurrentWatchView)
             {
             case ModeView:
@@ -275,7 +280,7 @@ void Demo_Runnable(void)
         }
     }
 
-    if (byte ==0)
+    if (byte ==  NotPressed)
     {
         switch (CurrentWatchView)
         {

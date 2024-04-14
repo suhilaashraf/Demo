@@ -214,46 +214,36 @@ void Uart_Hnadler(void)
             {
                 ((Uart_t *)TxUserRequest.UART_X)->DR = TxUserRequest.buffer.data[TxUserRequest.buffer.pos];
                 TxUserRequest.buffer.pos++;
-                if(TxUserRequest.buffer.pos == TxUserRequest.buffer.size)
+                if (TxUserRequest.buffer.pos == TxUserRequest.buffer.size)
                 {
                     TxUserRequest.state = Ready;
+                    if (TxUserRequest.cbf)
+                    {
+                        TxUserRequest.cbf();
+                    }
                     ((Uart_t *)TxUserRequest.UART_X)->CR1 &= ~Uart_TXEIE;
-
-                }               
-            }
-            else
-            {
-                TxUserRequest.state = Ready;
-                if (TxUserRequest.cbf)
-                {
-                    TxUserRequest.cbf();
                 }
-               ((Uart_t *)TxUserRequest.UART_X)->CR1 &= ~Uart_TXEIE;
             }
         }
     }
-    if (RxUserRequest.state == Busy)
+    else if (RxUserRequest.state == Busy)
     {
         if (RxUserRequest.buffer.pos < RxUserRequest.buffer.size)
         {
-
-            RxUserRequest.buffer.data[RxUserRequest.buffer.pos] = ((Uart_t *)RxUserRequest.UART_X)->DR;
-            RxUserRequest.buffer.pos++;
-            if(RxUserRequest.buffer.pos == RxUserRequest.buffer.size)
+            if (((Uart_t *)RxUserRequest.UART_X)->SR & Uart_RXNE)
             {
-                RxUserRequest.state = Ready;
-                ((Uart_t *)RxUserRequest.UART_X)->CR1 &= ~Uart_RXNEIE;
-
+                RxUserRequest.buffer.data[RxUserRequest.buffer.pos] = ((Uart_t *)RxUserRequest.UART_X)->DR;
+                RxUserRequest.buffer.pos++;
+                if (RxUserRequest.buffer.pos == RxUserRequest.buffer.size)
+                {
+                    RxUserRequest.state = Ready;
+                    if (RxUserRequest.cbf)
+                    {
+                        RxUserRequest.cbf();
+                    }
+                    //((Uart_t *)RxUserRequest.UART_X)->CR1 &= ~Uart_RXNEIE;
+                }
             }
-        }
-        else
-        {
-            if (RxUserRequest.cbf)
-            {
-                RxUserRequest.cbf();
-            }
-            RxUserRequest.state = Ready;
-
         }
     }
 }

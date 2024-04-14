@@ -3,9 +3,9 @@
 
 typedef enum
 {
+	Switch_right,
 	Switch_up,
 	Switch_down,
-	Switch_right,
 	Switch_left,
 	Switch_mode,
 
