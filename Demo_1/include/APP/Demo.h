@@ -4,13 +4,6 @@
 #include"Sched.h"
 
 /********************Stop Watch Buttons***********************/
-#define SWITCH_UP       0x10
-#define SWITCH_DOWN     0x20
-#define SWITCH_RIGHT    0x30
-#define SWITCH_LEFT     0x40
-#define MODE_BUTTON     0x50
-
-/********************Stop Watch Buttons***********************/
 typedef enum 
 {
     DefaultView,

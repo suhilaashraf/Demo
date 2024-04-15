@@ -4,18 +4,22 @@
 #include "Demo.h"
 
 /***************************************************/
-#define Ascii0 48
-#define AsciiColon 58
-#define AsciiDash 45
-#define START 1
-#define PAUSE 2
-#define STOP 3
+#define Ascii0      48
+#define AsciiColon  58
+#define AsciiDash   45
+#define START       1
+#define PAUSE       2
+#define STOP        3
 #define Periodicity 50
-#define newline 15
-#define inc 1
-#define dec 2
-#define send    1
-#define receive 2
+#define inc         1
+#define dec         2
+#define MODE        5
+#define UP          1
+#define DOWN        2
+#define RIGHT       3
+#define LEFT        4
+
+
 
 #define READY   0x0A
 #define BUSY    0x0B
@@ -75,7 +79,6 @@ Time_t Time;
 Time_t Stopwatch;
 uint32_t CurrentPressedSwitch = _SWITCH_NUM;
 WatchViews CurrentWatchView = DefaultView;
-uint8_t LCD_command = CURSOR1;
 uint8_t default_counter;
 uint8_t mode_counter;
 uint8_t EditTime_counter;
@@ -89,8 +92,6 @@ char TimeString[10];
 char *StopWatchbuffer = TimeString;
 uint8_t ReceiveBuffer[1]={NotPressed};
 uint8_t SendBuffer [1];
-uint8_t Txflag;
-uint8_t uart_state;
 
 /*************************Functions ProtoTypes****************************/
 void CurrDate(void);
@@ -107,74 +108,51 @@ void Display_EditTime(void);
 void EditTime(void);
 void DisplayBlinkingTime(void);
 void DisplayBlinkingDate(void);
-void Uart_Req (void);
 
 /*****************************Implementation*******************************/
 void SwitchControl(void)
 {
-    static uint8_t counter;
     uint16_t modestatus;
     uint8_t idx;
-    counter++;
-    if (counter == 3)
+    static uint8_t count[_SWITCH_NUM];
+    for (idx = 0; idx < _SWITCH_NUM; idx++)
     {
-        counter = 0;
-        for (idx = 0; idx < _SWITCH_NUM; idx++)
+        SWITCH_GETSTATUS(idx, &modestatus);
+        if (modestatus == SWITCH_PRESSED)
         {
-            SWITCH_GETSTATUS(idx, &modestatus);
-            if (modestatus == SWITCH_PRESSED)
+            if (count[idx] == 0)
             {
-                CurrentPressedSwitch = idx;
+                count[idx]++;
+                CurrentPressedSwitch = idx+1;
                 idx = _SWITCH_NUM;
                 SendBuffer[0] = CurrentPressedSwitch;
                 Uart_TxBufferAsync(SendBuffer, 1, UART_1, NULL);
             }
         }
+        else
+        {
+            count[idx] = 0;
+        }
     }
 }
 
-void UART_control()
-{
-    static uint8_t uart_counter;
-    uart_counter++;
-    if (uart_counter==1)
-    {
-        uart_state=send;
-        SendBuffer[0]=BUSY;
-        ReceiveBuffer[0]=0;
-        Uart_TxBufferAsync(SendBuffer,2,UART_1,NULL);
-    }
-    else if (uart_counter==2)
-    {
-        uart_state=receive;
-        SendBuffer[0] = READY;
-        ReceiveBuffer[0]=0;
-        Uart_TxBufferAsync(SendBuffer, 2, UART_1,NULL);
-    }
-    else if (uart_counter==3)
-    {
-        uart_state=receive;
-        Uart_RxBufferAsync(ReceiveBuffer, 1, UART_1,NULL);
-        uart_counter=0;
-    }
-}
 void Demo_Runnable(void)
 {
-    static uint8_t byte = NotPressed;
+    static uint8_t ControlSwitch = NotPressed;
     SwitchControl();
     Uart_RxBufferAsync(ReceiveBuffer, 1, UART_1,NULL);
-    byte = ReceiveBuffer[0];
+    ControlSwitch = ReceiveBuffer[0];
     CurrDateAndTime();
     StopWatch();
     EditTime();
 
-    if (byte !=  NotPressed )
+    if (ControlSwitch > 0 && ControlSwitch < NotPressed)
     {
         LCD_clearScreenAsyn();
-        ReceiveBuffer[0]= NotPressed;
-        switch (byte)
+        ReceiveBuffer[0] = NotPressed;
+        switch (ControlSwitch)
         {
-        case 4:
+        case MODE:
             switch (CurrentWatchView)
             {
             case DefaultView:
@@ -195,7 +173,7 @@ void Demo_Runnable(void)
                 break;
             }
             break;
-        case 1:
+        case UP:
             switch (CurrentWatchView)
             {
             case ModeView:
@@ -213,7 +191,7 @@ void Demo_Runnable(void)
                 break;
             }
             break;
-        case 2:
+        case DOWN:
             switch (CurrentWatchView)
             {
             case ModeView:
@@ -241,7 +219,7 @@ void Demo_Runnable(void)
             }
             break;
 
-        case 'R':
+        case RIGHT:
             switch (CurrentWatchView)
             {
             case EditTimeView:
@@ -258,7 +236,7 @@ void Demo_Runnable(void)
             }
             break;
 
-        case 'L':
+        case LEFT:
             switch (CurrentWatchView)
             {
             case EditTimeView:
@@ -280,7 +258,7 @@ void Demo_Runnable(void)
         }
     }
 
-    if (byte ==  NotPressed)
+    else
     {
         switch (CurrentWatchView)
         {
@@ -507,6 +485,7 @@ void StopWatch(void)
     static uint32_t st_sw_counter = 0;
     if (stopwatchstate == START)
     {
+        stopwatchcounter=0;
         if (st_sw_counter == 1000)
         {
             Stopwatch.Seconds.digit0++;
@@ -570,7 +549,7 @@ void EditTime(void)
         switch (arrowcounter)
         {
         case 0:
-            if (Date.Day.digit1 == 3)
+            if (Date.Day.digit1 == 4)
             {
                 Date.Day.digit1 = 0;
             }
@@ -583,6 +562,10 @@ void EditTime(void)
             if (Date.Day.digit0 == 9)
             {
                 Date.Day.digit0 = 0;
+            }
+            else if (Date.Day.digit1 == 3 &&  Date.Day.digit0 >1)
+            {
+                Date.Day.digit1=0;
             }
             else
             {
@@ -663,6 +646,10 @@ void EditTime(void)
             if (Time.Hours.digit0 == 9)
             {
                 Time.Hours.digit0 = 0;
+            }
+            else if (Time.Hours.digit1 == 2 && Time.Hours.digit0 >4)
+            {
+                Time.Hours.digit1=1;
             }
             else
             {

@@ -241,7 +241,7 @@ void Uart_Hnadler(void)
                     {
                         RxUserRequest.cbf();
                     }
-                    //((Uart_t *)RxUserRequest.UART_X)->CR1 &= ~Uart_RXNEIE;
+                    ((Uart_t *)RxUserRequest.UART_X)->CR1 &= ~Uart_RXNEIE;
                 }
             }
         }
