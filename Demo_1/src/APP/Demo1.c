@@ -13,15 +13,17 @@
 #define Periodicity 50
 #define inc 1
 #define dec 2
-#define NotPressed 6
-#define MODE 5
-#define UP 1
-#define DOWN 2
-#define RIGHT 3
-#define LEFT 4
+
+
+#define UP          1
+#define DOWN        2
+#define RIGHT       3
+#define LEFT        4
+#define MODE        5  
+#define NotPressed  6
 
 #define READY 0x0A
-#define BUSY 0x0B
+#define BUSY  0x0B
 
 #define ONES 1
 #define TENS 10
@@ -186,7 +188,7 @@ void Demo_Runnable(void)
                 {
                     arrowcounter++;
                 }
-                else if (arrowcounter == 17)
+                else if (arrowcounter == 18)
                 {
                     arrowcounter = 0;
                 }
@@ -202,15 +204,16 @@ void Demo_Runnable(void)
             {
             case EditTimeView:
                 EditTime_counter = 0;
+                arrowcounter--;
                 if (arrowcounter == 2 || arrowcounter == 5 || arrowcounter == 12 || arrowcounter == 15)
                 {
                     arrowcounter--;
                 }
                 if (arrowcounter == 0)
                 {
-                    arrowcounter = 17;
+                    arrowcounter = 18;
                 }
-                arrowcounter--;
+                
                 break;
 
             default:
@@ -735,7 +738,7 @@ void BlinkDate(void)
         if (date_blink == 3)
             date_blink = 6;
     }
-    else if (date_blink > 3)
+    else if (date_blink > 3 && arrowcounter <= 9)
     {
         DateString[arrowcounter] = '_';
         date_blink--;
@@ -763,7 +766,7 @@ void BlinkTime(void)
         if (time_blink == 3)
             time_blink = 6;
     }
-    else if (time_blink > 3)
+    else if (time_blink > 3 && arrowcounter > 9)
     {
         TimeString[arrowcounter - 10] = '_';
         time_blink--;
