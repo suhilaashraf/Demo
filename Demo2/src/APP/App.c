@@ -1,19 +1,17 @@
 #include"RCC.h"
 #include"gpio.h"
+#include"Sched.h"
 #include "Switch.h"
-#include"Demo.h"
 #include "Uart.h"
 #include "NVIC.h"
-
-
+#include "Led.h"
 int main()
 {
+  
   NVIC_EnableIRQ(IRQ_USART1);
   RCC_EnablePeripheral(AHB1, AHB1EN_GPIOA);
   RCC_EnablePeripheral(AHB1, AHB1EN_GPIOB);
-  RCC_EnablePeripheral(APB2,APB2EN_USART1);
-
-
+  RCC_EnablePeripheral(APB2, APB2EN_USART1);
   
   GPIOPIN_t uarttx;
   GPIOPIN_t uartrx;
@@ -31,9 +29,8 @@ int main()
 
   GPIO_InitPin(&uartrx);
   GPIO_InitPin(&uarttx);
-
-
-  WatchInit();
+  LED_init();
+  Led_SetStatus(Ledone,0);
   Sched_init();
   Sched_Start();
 

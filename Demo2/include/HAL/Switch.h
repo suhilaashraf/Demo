@@ -36,13 +36,13 @@
 /********************SWITCH Coneection********************/
 
 #define SWITCH_FLOATING		(uint32_t)0x00000000
-#define SWITCH_PULLDOWN 	(uint32_t)0x00010001
-#define SWITCH_PULLUP		(uint32_t)0x00020002
+#define SWITCH_PULLUP 	    (uint32_t)0x00010001
+#define SWITCH_PULLDOWN		(uint32_t)0x00020002
 
 /********************SWITCH STATUS********************/
 
-#define SWITCH_PRESSED			0
-#define SWITCH_RELEASED			1
+#define SWITCH_PRESSED			1 
+#define SWITCH_RELEASED			0
 
 /********************SWITCH APIs Prototypes********************/
 

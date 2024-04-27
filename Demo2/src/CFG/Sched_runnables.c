@@ -1,31 +1,20 @@
 #include "Sched.h"
 
 /******************** System Runnables Prototypes********************/
-void LCD_task();
-void Demo_Runnable(void);
+
 void SWITCH_Runabble(void);
-void SwitchControl(void);
-void Uart_Runnable (void);
-void Uart_TxRunnable(void);
-void Uart_RxRunnable(void);
+void demo2_runnable();
 
 Runnable_t Runnables_info [RUNNABLES_NUM]=
 {
     [0]=
     {
-        .name = "LCD_TASK",
-        .periodicity_ms = 2,
-        .cbf = LCD_task,
+        .name = "DEMO",
+        .periodicity_ms = 1,
+        .cbf = demo2_runnable,
         .FirstDelay=0,
     },
     [1]=
-    {
-        .name = "Demo1",
-        .periodicity_ms = 50,
-        .cbf = Demo_Runnable,
-        .FirstDelay=3,
-    },
-    [2]=
     {
         .name = "Switch",
         .periodicity_ms = 5,
