@@ -3,12 +3,8 @@
 
 typedef enum
 {
-	Switch_up,
-	Switch_down,
-	Switch_right,
-	Switch_left,
-	Switch_mode,
-
+	Switch_one,
+	
 	_SWITCH_NUM  /*THE USER SHOULDNOT CHANGE IT */
 }SWITCHES_enu;
 
