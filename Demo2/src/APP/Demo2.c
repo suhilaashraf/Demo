@@ -55,19 +55,21 @@ void parse_command()
             break; 
         }
         Send_Buffer[0] = GPIO_STATE;
-        Uart_TxBufferAsync(Send_Buffer, 1, UART_1, NULL);
+        Send_Buffer[1] = 0xFF;
+        Uart_TxBufferAsync(Send_Buffer, 2, UART_1, NULL);
         break;
 
     case CMD_SET_LED_STATE:
         GPIO_SetPinValue(GPIO_PORTA,0,param_state);
-        GPIO_STATE=0xff;
         Send_Buffer[0] = GPIO_STATE;
-        Uart_TxBufferAsync(Send_Buffer, 1, UART_1, NULL);
+        Send_Buffer[1] = 0xFF;
+        Uart_TxBufferAsync(Send_Buffer, 2, UART_1, NULL);
         break;
     case CMD_GET_SWITCH_STATE:
         SWITCH_GETSTATUS(param_idx,&SWITCH_STATE);
         Send_Buffer[0] = SWITCH_STATE;
-        Uart_TxBufferAsync(Send_Buffer, 1, UART_1, NULL);
+        Send_Buffer[1] = 0xFF;
+        Uart_TxBufferAsync(Send_Buffer, 2, UART_1, NULL);
 
     default:
         break;
